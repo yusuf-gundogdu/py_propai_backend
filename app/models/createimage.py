@@ -6,7 +6,7 @@ class CreateImage(Base):
     __tablename__ = "createimage"
     id = Column(Integer, primary_key=True, index=True)
     createImagePath = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("accounts.id"))
+    user_id = Column(Integer, ForeignKey("account.id"))
     user = relationship("Account", back_populates="create_images")
     model_id = Column(Integer, ForeignKey("generatemodelitem.id"))
     model = relationship("GenerateModelItem", back_populates="create_images") 

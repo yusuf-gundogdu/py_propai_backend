@@ -6,7 +6,7 @@ class ImageHistory(Base):
     __tablename__ = "imagehistory"
     id = Column(Integer, primary_key=True, index=True)
     usedCredit = Column(Integer, nullable=False)
-    user_id = Column(Integer, ForeignKey("accounts.id"))
+    user_id = Column(Integer, ForeignKey("account.id"))
     user = relationship("Account", back_populates="image_histories")
     model_id = Column(Integer, ForeignKey("generatemodelitem.id"))
     model = relationship("GenerateModelItem", back_populates="image_histories")

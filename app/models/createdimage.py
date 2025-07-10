@@ -9,7 +9,7 @@ class CreatedImage(Base):
     createdImagePath = Column(String, nullable=False)
     credit = Column(Integer, nullable=False)
     Status = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("accounts.id"))
+    user_id = Column(Integer, ForeignKey("account.id"))
     user = relationship("Account", back_populates="created_images")
     model_id = Column(Integer, ForeignKey("generatemodelitem.id"))
     model = relationship("GenerateModelItem", back_populates="created_images")

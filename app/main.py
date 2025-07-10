@@ -51,16 +51,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 app.add_middleware(LoggingMiddleware)
 
 # Router'ları ekle
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(docs_auth_router)
-app.include_router(user_router)
-app.include_router(account_router)
-app.include_router(generatemodellist_router)
-app.include_router(generatemodelitem_router)
-app.include_router(generatemodelitemimage_router)
-app.include_router(createimage_router)
-app.include_router(createdimage_router)
-app.include_router(imagehistory_router)
+app.include_router(user_router, prefix="/api")
+app.include_router(account_router, prefix="/api")
+app.include_router(generatemodellist_router, prefix="/api")
+app.include_router(generatemodelitem_router, prefix="/api")
+app.include_router(generatemodelitemimage_router, prefix="/api")
+app.include_router(createimage_router, prefix="/api")
+app.include_router(createdimage_router, prefix="/api")
+app.include_router(imagehistory_router, prefix="/api")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 

@@ -8,10 +8,19 @@ class AccountBase(BaseModel):
     credit: Optional[int]
     level: Optional[int]
 
-class AccountCreate(AccountBase):
-    pass
-
-class AccountRead(AccountBase):
+class AccountRead(BaseModel):
     id: int
+    udid: str
+    platform: PlatformEnum
+    level: int
+    credit: int
+    timestamp: Optional[int] = None
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class AccountUpdate(BaseModel):
+    udid: Optional[str] = None
+    platform: Optional[PlatformEnum] = None
+    level: Optional[int] = None
+    credit: Optional[int] = None
+    timestamp: Optional[int] = None 
