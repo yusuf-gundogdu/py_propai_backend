@@ -24,4 +24,5 @@ async def secure_endpoint(token: HTTPAuthorizationCredentials = Depends(bearer_s
     if not username:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
+
     return {"message": f"Hello, {username}! This is a protected endpoint."}
