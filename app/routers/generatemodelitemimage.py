@@ -7,23 +7,41 @@ from app.database import get_db
 from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.schemas.generatemodelitemimage import GenerateModelItemImageCreate, GenerateModelItemImageRead
 from typing import List, Optional
-from app.models.generatemodelitem import GenerateModelItem
-from pydantic import BaseModel
+from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/generatemodelitemimages", tags=["GenerateModelItemImage"])
 
 @router.get("/", response_model=List[GenerateModelItemImageRead])
-async def list_images(skip: int = Query(0, ge=0), limit: int = Query(100, le=1000), db: AsyncSession = Depends(get_db)):
-    query = select(GenerateModelItemImage)
-    result = await db.execute(query.offset(skip).limit(limit))
-    return result.scalars().all()
+async def list_images(
+    skip: int = Query(0, ge=0), 
+    limit: int = Query(100, le=1000), 
+    image_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    if image_id:
+        # Belirli bir resmi getir
+        obj = await db.get(GenerateModelItemImage, image_id)
+        if not obj:
+            raise HTTPException(status_code=404, detail="Image not found")
+        return [obj]
+    else:
+        # Tüm resimleri listele
+        query = select(GenerateModelItemImage)
+        result = await db.execute(query.offset(skip).limit(limit))
+        return result.scalars().all()
 
-@router.get("/{image_id}", response_model=GenerateModelItemImageRead)
+@router.get("/{image_id}")
 async def get_image(image_id: int, db: AsyncSession = Depends(get_db)):
     obj = await db.get(GenerateModelItemImage, image_id)
     if not obj:
         raise HTTPException(status_code=404, detail="GenerateModelItemImage not found")
-    return obj
+    
+    # Resim dosyasının var olup olmadığını kontrol et
+    if not os.path.exists(obj.filePath):
+        raise HTTPException(status_code=404, detail="Image file not found")
+    
+    # Resmi döndür
+    return FileResponse(obj.filePath)
 
 @router.post("/", response_model=GenerateModelItemImageRead, status_code=status.HTTP_201_CREATED)
 async def upload_image_no_model(
@@ -53,38 +71,20 @@ async def upload_image_no_model(
 
     return obj
 
-class AssignImageModel(BaseModel):
-    model_id: int
-
-@router.put("/{image_id}/assign_model", response_model=GenerateModelItemImageRead)
-async def assign_image_to_model(
-    image_id: int,
-    data: AssignImageModel,
-    db: AsyncSession = Depends(get_db)
-):
-    obj = await db.get(GenerateModelItemImage, image_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Image not found")
-    obj.model_id = data.model_id
-    await db.commit()
-    await db.refresh(obj)
-    return obj
-
-@router.put("/{image_id}", response_model=GenerateModelItemImageRead)
-async def update_image(image_id: int, data: GenerateModelItemImageCreate, db: AsyncSession = Depends(get_db)):
-    obj = await db.get(GenerateModelItemImage, image_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="GenerateModelItemImage not found")
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(obj, key, value)
-    await db.commit()
-    await db.refresh(obj)
-    return obj
-
 @router.delete("/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_image(image_id: int, db: AsyncSession = Depends(get_db)):
     obj = await db.get(GenerateModelItemImage, image_id)
     if not obj:
         raise HTTPException(status_code=404, detail="GenerateModelItemImage not found")
+    
+    # Önce dosyayı sil
+    try:
+        if os.path.exists(obj.filePath):
+            os.remove(obj.filePath)
+    except OSError as e:
+        # Dosya silme hatası olsa bile veritabanı kaydını silmeye devam et
+        print(f"Dosya silme hatası: {e}")
+    
+    # Veritabanı kaydını sil
     await db.delete(obj)
     await db.commit() 

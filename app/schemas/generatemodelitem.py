@@ -1,17 +1,20 @@
 from pydantic import BaseModel
 from typing import Optional
+from app.schemas.generatemodelitemimage import GenerateModelItemImageRead
 
 class GenerateModelItemBase(BaseModel):
     name: str
     credit: int
     level: int
-    list_id: Optional[int]
-    image_id: Optional[int]
 
 class GenerateModelItemCreate(GenerateModelItemBase):
-    pass
+    image_id: Optional[int] = None
 
-class GenerateModelItemRead(GenerateModelItemBase):
+class GenerateModelItemRead(BaseModel):
     id: int
+    name: str
+    credit: int
+    level: int
+    image: Optional[GenerateModelItemImageRead] = None
     class Config:
         from_attributes = True 

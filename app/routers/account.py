@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from fastapi.responses import FileResponse
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.database import get_db
@@ -65,4 +67,22 @@ async def delete_account(account_id: int, db: AsyncSession = Depends(get_db)):
     if not db_account:
         raise HTTPException(status_code=404, detail="Account not found")
     await db.delete(db_account)
-    await db.commit() 
+    await db.commit()
+
+@router.get("/image/{image_path:path}")
+async def get_image(image_path: str):
+    # Güvenlik için path traversal saldırılarını engelle
+    if ".." in image_path or image_path.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid image path")
+
+    # Resim dosyasının tam yolunu oluştur
+    # Örnek: /uploads/images/ klasöründen servis et
+    image_dir = "/uploads/images"  # Bu yolu ihtiyacına göre değiştir
+    full_path = os.path.join(image_dir, image_path)
+
+    # Dosyanın var olup olmadığını kontrol et
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Dosyayı döndür
+    return FileResponse(full_path) 
