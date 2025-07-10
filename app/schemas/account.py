@@ -1,21 +1,17 @@
 from pydantic import BaseModel
 from typing import Optional
+from app.models.account import PlatformEnum
 
 class AccountBase(BaseModel):
-    name: str
-    city_id: int
-    district_id: int
+    udid: str
+    platform: Optional[PlatformEnum]
+    credit: Optional[int]
+    level: Optional[int]
 
 class AccountCreate(AccountBase):
     pass
 
-class AccountUpdate(BaseModel):
-    name: Optional[str] = None
-    city_id: Optional[int] = None
-    district_id: Optional[int] = None
-
-class AccountResponse(AccountBase):
+class AccountRead(AccountBase):
     id: int
-    
     class Config:
-        from_attributes = True
+        from_attributes = True 

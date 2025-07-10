@@ -4,58 +4,10 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db, engine
 from app.models.user import User
-from app.models.role import Role
 from app.schemas.user import UserCreate, User as UserSchema
 from app.utils.auth_utils import get_password_hash, get_current_admin
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-# Default admin kullanıcı oluştur
-async def create_default_user():
-    async with engine.begin() as conn:
-        async with AsyncSession(conn) as db:
-            try:
-                # Önce administrator rolünü oluştur (eğer yoksa)
-                admin_role = await db.execute(select(Role).where(Role.name == "administrator"))
-                admin_role = admin_role.scalar_one_or_none()
-                
-                if not admin_role:
-                    admin_role = Role(name="administrator")
-                    db.add(admin_role)
-                    await db.commit()
-                    await db.refresh(admin_role)
-                    print(f"✅ Administrator rolü oluşturuldu (ID: {admin_role.id})")
-                else:
-                    print(f"✅ Administrator rolü zaten mevcut (ID: {admin_role.id})")
-                
-                # Admin kullanıcısını kontrol et
-                result = await db.execute(select(User).where(User.username == "admin"))
-                existing_admin = result.scalar_one_or_none()
-                
-                if not existing_admin:
-                    admin = User(
-                        username="admin",
-                        hashed_password=get_password_hash("190943"),
-                        is_active=True,
-                        role_id=admin_role.id  # Administrator rolünü ata
-                    )
-                    db.add(admin)
-                    await db.commit()
-                    await db.refresh(admin)
-                    print(f"✅ Admin kullanıcısı oluşturuldu (ID: {admin.id}, Role ID: {admin.role_id})")
-                else:
-                    # Eğer admin varsa ama role_id yoksa, role_id'yi güncelle
-                    if existing_admin.role_id is None:
-                        existing_admin.role_id = admin_role.id
-                        await db.commit()
-                        await db.refresh(existing_admin)
-                        print(f"✅ Mevcut admin kullanıcısına role atandı (ID: {existing_admin.id}, Role ID: {existing_admin.role_id})")
-                    else:
-                        print(f"✅ Admin kullanıcısı zaten mevcut (ID: {existing_admin.id}, Role ID: {existing_admin.role_id})")
-            except Exception as e:
-                await db.rollback()
-                print(f"❌ Hata: {e}")
-                raise e
 
 # Kullanıcı oluşturma (Sadece admin)
 @router.post("/", response_model=UserSchema)
