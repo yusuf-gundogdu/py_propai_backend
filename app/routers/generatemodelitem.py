@@ -23,12 +23,33 @@ async def get_or_create_item(item_id: int, db: AsyncSession = Depends(get_db)):
     obj = result.scalar_one_or_none()
     
     if not obj:
+        # En yüksek priority'yi bul
+        max_priority_result = await db.execute(
+            select(GenerateModelItem.priority).order_by(GenerateModelItem.priority.desc()).limit(1)
+        )
+        max_priority = max_priority_result.scalar_one_or_none()
+        next_priority = (max_priority or 0) + 1
+        
+        # Benzersiz isim oluştur
+        base_name = f"Auto Generated Item {item_id}"
+        name = base_name
+        counter = 1
+        while True:
+            existing_item = await db.execute(
+                select(GenerateModelItem).where(GenerateModelItem.name == name)
+            )
+            if not existing_item.scalar_one_or_none():
+                break
+            name = f"{base_name} ({counter})"
+            counter += 1
+        
         # Eğer yoksa otomatik oluştur
         obj = GenerateModelItem(
             id=item_id,
-            name=f"Auto Generated Item {item_id}",
+            name=name,  # Benzersiz isim kullan
             credit=10,
             level=1,
+            priority=next_priority,  # Otomatik priority ata
             image_id=None  # image_id'yi None olarak ayarla
         )
         db.add(obj)
@@ -43,6 +64,36 @@ async def create_item(data: GenerateModelItemCreate, db: AsyncSession = Depends(
     item_data = data.model_dump()
     if item_data.get('image_id') == 0:
         item_data['image_id'] = None
+    
+    # Name kontrolü - aynı isimde item var mı kontrol et
+    existing_item = await db.execute(
+        select(GenerateModelItem).where(GenerateModelItem.name == data.name)
+    )
+    if existing_item.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Item with name '{data.name}' already exists. Please choose another name."
+        )
+    
+    # Priority kontrolü ve atama
+    priority = item_data.get('priority')
+    if priority is not None:
+        # Verilen priority'de başka item var mı kontrol et
+        existing_item = await db.execute(
+            select(GenerateModelItem).where(GenerateModelItem.priority == priority)
+        )
+        if existing_item.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Priority {priority} is already taken. Please choose another priority value."
+            )
+    else:
+        # Priority verilmemişse en yüksek priority + 1 ata
+        max_priority_result = await db.execute(
+            select(GenerateModelItem.priority).order_by(GenerateModelItem.priority.desc()).limit(1)
+        )
+        max_priority = max_priority_result.scalar_one_or_none()
+        item_data['priority'] = (max_priority or 0) + 1
     
     obj = GenerateModelItem(**item_data)
     db.add(obj)

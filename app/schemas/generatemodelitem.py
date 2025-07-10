@@ -9,12 +9,14 @@ class GenerateModelItemBase(BaseModel):
 
 class GenerateModelItemCreate(GenerateModelItemBase):
     image_id: Optional[int] = None
+    priority: Optional[int] = None  # Gönderilmezse otomatik atanacak
 
 class GenerateModelItemRead(BaseModel):
     id: int
     name: str
     credit: int
     level: int
+    priority: int  # Asla null olamaz
     image: Optional[GenerateModelItemImageRead] = None
     class Config:
         from_attributes = True 
