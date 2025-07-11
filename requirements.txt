@@ -8,3 +8,5 @@ passlib
 python-jose[cryptography]
 python-multipart
 bcrypt
+jinja2
+aiofiles

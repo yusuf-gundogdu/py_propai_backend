@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.models.generatemodelitem import GenerateModelItem
-from app.schemas.generatemodelitem import GenerateModelItemCreate, GenerateModelItemRead
+from app.schemas.generatemodelitem import GenerateModelItemCreate, GenerateModelItemRead, GenerateModelItemUpdate
 from typing import List, Optional
 
 router = APIRouter(prefix="/generatemodelitems", tags=["GenerateModelItem"])
@@ -97,6 +97,58 @@ async def create_item(data: GenerateModelItemCreate, db: AsyncSession = Depends(
     
     obj = GenerateModelItem(**item_data)
     db.add(obj)
+    await db.commit()
+    await db.refresh(obj)
+    
+    # image ilişkisini yüklemek için tekrar sorgu yap
+    query = select(GenerateModelItem).options(joinedload(GenerateModelItem.image)).where(GenerateModelItem.id == obj.id)
+    result = await db.execute(query)
+    return result.scalar_one()
+
+@router.put("/{item_id}", response_model=GenerateModelItemRead)
+async def update_item(item_id: int, data: GenerateModelItemUpdate, db: AsyncSession = Depends(get_db)):
+    obj = await db.get(GenerateModelItem, item_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="GenerateModelItem not found")
+    
+    # image_id 0 ise None olarak ayarla
+    update_data = data.model_dump(exclude_unset=True)
+    if update_data.get('image_id') == 0:
+        update_data['image_id'] = None
+    
+    # Name kontrolü - aynı isimde başka item var mı kontrol et (kendisi hariç)
+    if 'name' in update_data:
+        existing_item = await db.execute(
+            select(GenerateModelItem).where(
+                GenerateModelItem.name == update_data['name'],
+                GenerateModelItem.id != item_id
+            )
+        )
+        if existing_item.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Item with name '{update_data['name']}' already exists. Please choose another name."
+            )
+    
+    # Priority kontrolü
+    if 'priority' in update_data:
+        # Verilen priority'de başka item var mı kontrol et (kendisi hariç)
+        existing_item = await db.execute(
+            select(GenerateModelItem).where(
+                GenerateModelItem.priority == update_data['priority'],
+                GenerateModelItem.id != item_id
+            )
+        )
+        if existing_item.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Priority {update_data['priority']} is already taken. Please choose another priority value."
+            )
+    
+    # Alanları güncelle
+    for key, value in update_data.items():
+        setattr(obj, key, value)
+    
     await db.commit()
     await db.refresh(obj)
     

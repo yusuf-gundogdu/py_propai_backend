@@ -1,0 +1,607 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Model Yönetimi - PropAI Admin{% endblock %}
+{% block page_title %}Model Yönetimi{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModelModal">
+    <i class="fas fa-plus me-2"></i>Yeni Model
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Model Listesi -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Listesi</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="modelsTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Liste Adı</th>
+                                <th>Öncelik</th>
+                                <th>Item Sayısı</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modelsTableBody">
+                            <!-- JavaScript ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model İstatistikleri -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model İstatistikleri</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam Model</span>
+                        <span class="badge bg-primary" id="totalModels">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam Item</span>
+                        <span class="badge bg-success" id="totalItems">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Ortalama Item/Model</span>
+                        <span class="badge bg-info" id="avgItems">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Durumu -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Durumu</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="modelStatusChart" width="100" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Model Modal -->
+<div class="modal fade" id="addModelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Model Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addModelForm">
+                    <div class="mb-3">
+                        <label for="modelName" class="form-label">Liste Adı</label>
+                        <input type="text" class="form-control" id="modelName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modelPriority" class="form-label">Öncelik</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="modelPriority" min="1" placeholder="Otomatik atanacak">
+                            <button type="button" class="btn btn-outline-secondary" onclick="checkPriorities()">
+                                <i class="fas fa-search"></i> Mevcut Öncelikler
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">Boş bırakırsanız otomatik olarak en yüksek öncelik + 1 atanacaktır.</small>
+                        <div id="priorityInfo" class="mt-2" style="display: none;">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <span id="priorityList"></span>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Item Seçimi</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Mevcut Itemlar</label>
+                                <select class="form-select" id="availableItems" multiple size="8">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex flex-column justify-content-center">
+                                <button type="button" class="btn btn-outline-primary mb-2" onclick="addSelectedItems()">
+                                    <i class="fas fa-arrow-right"></i> Ekle
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="removeSelectedItems()">
+                                    <i class="fas fa-arrow-left"></i> Çıkar
+                                </button>
+                            </div>
+                            <div class="col-md-12 mt-3">
+                                <label class="form-label">Seçili Itemlar</label>
+                                <select class="form-select" id="selectedItems" multiple size="4">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addModel()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Düzenleme Modal -->
+<div class="modal fade" id="editModelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Model Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editModelForm">
+                    <input type="hidden" id="editModelId">
+                    <div class="mb-3">
+                        <label for="editModelName" class="form-label">Liste Adı</label>
+                        <input type="text" class="form-control" id="editModelName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editModelPriority" class="form-label">Öncelik</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="editModelPriority" required min="1">
+                            <button type="button" class="btn btn-outline-secondary" onclick="checkEditPriorities()">
+                                <i class="fas fa-search"></i> Mevcut Öncelikler
+                            </button>
+                        </div>
+                        <div id="editPriorityInfo" class="mt-2" style="display: none;">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <span id="editPriorityList"></span>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Item Seçimi</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Mevcut Itemlar</label>
+                                <select class="form-select" id="editAvailableItems" multiple size="8">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex flex-column justify-content-center">
+                                <button type="button" class="btn btn-outline-primary mb-2" onclick="addSelectedItemsEdit()">
+                                    <i class="fas fa-arrow-right"></i> Ekle
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="removeSelectedItemsEdit()">
+                                    <i class="fas fa-arrow-left"></i> Çıkar
+                                </button>
+                            </div>
+                            <div class="col-md-12 mt-3">
+                                <label class="form-label">Seçili Itemlar</label>
+                                <select class="form-select" id="editSelectedItems" multiple size="4">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateModel()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allItems = [];
+let selectedItemIds = [];
+let editSelectedItemIds = [];
+
+$(document).ready(function() {
+    loadModels();
+    loadAllItems();
+    createModelChart();
+});
+
+function loadAllItems() {
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            allItems = data;
+        })
+        .catch(error => {
+            console.error('Itemlar yüklenirken hata:', error);
+        });
+}
+
+function loadModels() {
+    fetch('/api/generatemodellists/')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#modelsTableBody');
+            tbody.empty();
+            
+            let totalItems = 0;
+            
+            data.forEach(model => {
+                const itemCount = model.item_ids ? model.item_ids.length : 0;
+                totalItems += itemCount;
+                
+                const row = `
+                    <tr>
+                        <td>${model.id}</td>
+                        <td>${model.name}</td>
+                        <td>
+                            <span class="badge bg-info">${model.priority}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">${itemCount} item</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editModel(${model.id}, '${model.name}', ${model.priority}, ${JSON.stringify(model.item_ids || [])})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteModel(${model.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            // İstatistikleri güncelle
+            $('#totalModels').text(data.length);
+            $('#totalItems').text(totalItems);
+            $('#avgItems').text(data.length > 0 ? (totalItems / data.length).toFixed(1) : '0');
+            
+            // Grafik güncelle
+            updateModelChart(data.length, totalItems);
+        })
+        .catch(error => {
+            console.error('Modeller yüklenirken hata:', error);
+            $('#modelsTableBody').html('<tr><td colspan="5" class="text-center text-danger">Modeller yüklenirken hata oluştu</td></tr>');
+        });
+}
+
+let modelChart;
+
+function createModelChart() {
+    const ctx = document.getElementById('modelStatusChart').getContext('2d');
+    modelChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Modeller', 'Itemlar'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#007bff', '#28a745'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function updateModelChart(models, items) {
+    if (modelChart) {
+        modelChart.data.datasets[0].data = [models, items];
+        modelChart.update();
+    }
+}
+
+function populateAvailableItems() {
+    const availableSelect = $('#availableItems');
+    availableSelect.empty();
+    
+    allItems.forEach(item => {
+        if (!selectedItemIds.includes(item.id)) {
+            availableSelect.append(`<option value="${item.id}">${item.name} (ID: ${item.id})</option>`);
+        }
+    });
+}
+
+function populateSelectedItems() {
+    const selectedSelect = $('#selectedItems');
+    selectedSelect.empty();
+    
+    selectedItemIds.forEach(itemId => {
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+            selectedSelect.append(`<option value="${itemId}">${item.name} (ID: ${itemId})</option>`);
+        }
+    });
+}
+
+function addSelectedItems() {
+    const selected = $('#availableItems').val();
+    if (selected) {
+        selected.forEach(id => {
+            if (!selectedItemIds.includes(parseInt(id))) {
+                selectedItemIds.push(parseInt(id));
+            }
+        });
+        populateAvailableItems();
+        populateSelectedItems();
+    }
+}
+
+function removeSelectedItems() {
+    const selected = $('#selectedItems').val();
+    if (selected) {
+        selected.forEach(id => {
+            selectedItemIds = selectedItemIds.filter(itemId => itemId !== parseInt(id));
+        });
+        populateAvailableItems();
+        populateSelectedItems();
+    }
+}
+
+function populateEditAvailableItems() {
+    const availableSelect = $('#editAvailableItems');
+    availableSelect.empty();
+    
+    allItems.forEach(item => {
+        if (!editSelectedItemIds.includes(item.id)) {
+            availableSelect.append(`<option value="${item.id}">${item.name} (ID: ${item.id})</option>`);
+        }
+    });
+}
+
+function populateEditSelectedItems() {
+    const selectedSelect = $('#editSelectedItems');
+    selectedSelect.empty();
+    
+    editSelectedItemIds.forEach(itemId => {
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+            selectedSelect.append(`<option value="${itemId}">${item.name} (ID: ${itemId})</option>`);
+        }
+    });
+}
+
+function addSelectedItemsEdit() {
+    const selected = $('#editAvailableItems').val();
+    if (selected) {
+        selected.forEach(id => {
+            if (!editSelectedItemIds.includes(parseInt(id))) {
+                editSelectedItemIds.push(parseInt(id));
+            }
+        });
+        populateEditAvailableItems();
+        populateEditSelectedItems();
+    }
+}
+
+function removeSelectedItemsEdit() {
+    const selected = $('#editSelectedItems').val();
+    if (selected) {
+        selected.forEach(id => {
+            editSelectedItemIds = editSelectedItemIds.filter(itemId => itemId !== parseInt(id));
+        });
+        populateEditAvailableItems();
+        populateEditSelectedItems();
+    }
+}
+
+function addModel() {
+    const name = $('#modelName').val();
+    const priority = $('#modelPriority').val() ? parseInt($('#modelPriority').val()) : null;
+    
+    if (!name) {
+        alert('Liste adı gereklidir!');
+        return;
+    }
+    
+    // Loading state
+    const addButton = $('#addModelModal .btn-primary');
+    const originalText = addButton.text();
+    addButton.prop('disabled', true).text('Ekleniyor...');
+    
+    const requestData = {
+        name: name,
+        item_ids: selectedItemIds
+    };
+    
+    if (priority) {
+        requestData.priority = priority;
+    }
+    
+    fetch('/api/generatemodellists/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#addModelModal').modal('hide');
+            $('#addModelForm')[0].reset();
+            selectedItemIds = [];
+            populateAvailableItems();
+            populateSelectedItems();
+            loadModels();
+            alert('Liste başarıyla eklendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Liste eklenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        let errorMessage = error.message;
+        
+        // Öncelik çakışması kontrolü
+        if (errorMessage.includes('Priority') && errorMessage.includes('already taken')) {
+            errorMessage = 'Bu öncelik değeri zaten kullanılıyor. Lütfen farklı bir öncelik değeri seçin.';
+        }
+        
+        alert('Hata: ' + errorMessage);
+    })
+    .finally(() => {
+        // Loading state'i kaldır
+        addButton.prop('disabled', false).text(originalText);
+    });
+}
+
+function editModel(id, name, priority, itemIds) {
+    $('#editModelId').val(id);
+    $('#editModelName').val(name);
+    $('#editModelPriority').val(priority);
+    
+    editSelectedItemIds = itemIds || [];
+    populateEditAvailableItems();
+    populateEditSelectedItems();
+    
+    $('#editModelModal').modal('show');
+}
+
+function updateModel() {
+    const id = $('#editModelId').val();
+    const name = $('#editModelName').val();
+    const priority = parseInt($('#editModelPriority').val());
+    
+    if (!name) {
+        alert('Liste adı gereklidir!');
+        return;
+    }
+    
+    // Loading state
+    const updateButton = $('#editModelModal .btn-primary');
+    const originalText = updateButton.text();
+    updateButton.prop('disabled', true).text('Güncelleniyor...');
+    
+    fetch(`/api/generatemodellists/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            priority: priority,
+            item_ids: editSelectedItemIds
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#editModelModal').modal('hide');
+            loadModels();
+            alert('Liste başarıyla güncellendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Liste güncellenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        let errorMessage = error.message;
+        
+        // Öncelik çakışması kontrolü
+        if (errorMessage.includes('Priority') && errorMessage.includes('already taken')) {
+            errorMessage = 'Bu öncelik değeri zaten kullanılıyor. Lütfen farklı bir öncelik değeri seçin.';
+        }
+        
+        alert('Hata: ' + errorMessage);
+    })
+    .finally(() => {
+        // Loading state'i kaldır
+        updateButton.prop('disabled', false).text(originalText);
+    });
+}
+
+function deleteModel(id) {
+    if (confirm('Bu listeyi silmek istediğinizden emin misiniz?')) {
+        fetch(`/api/generatemodellists/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadModels();
+                alert('Liste başarıyla silindi!');
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.detail || 'Liste silinirken hata oluştu');
+                });
+            }
+        })
+        .catch(error => {
+            alert('Hata: ' + error.message);
+        });
+    }
+}
+
+// Modal açıldığında item listelerini güncelle
+$('#addModelModal').on('show.bs.modal', function() {
+    selectedItemIds = [];
+    populateAvailableItems();
+    populateSelectedItems();
+});
+
+function checkPriorities() {
+    fetch('/api/generatemodellists/')
+        .then(response => response.json())
+        .then(data => {
+            const priorities = data.map(item => `ID: ${item.id}, Ad: ${item.name}, Öncelik: ${item.priority}`).join('<br>');
+            $('#priorityList').html(priorities || 'Henüz öncelik atanmış liste yok.');
+            $('#priorityInfo').show();
+        })
+        .catch(error => {
+            console.error('Öncelikler yüklenirken hata:', error);
+            $('#priorityList').html('Öncelik bilgisi yüklenemedi.');
+            $('#priorityInfo').show();
+        });
+}
+
+function checkEditPriorities() {
+    const currentId = $('#editModelId').val();
+    fetch('/api/generatemodellists/')
+        .then(response => response.json())
+        .then(data => {
+            // Mevcut düzenlenen öğeyi hariç tut
+            const otherPriorities = data
+                .filter(item => item.id != currentId)
+                .map(item => `ID: ${item.id}, Ad: ${item.name}, Öncelik: ${item.priority}`)
+                .join('<br>');
+            $('#editPriorityList').html(otherPriorities || 'Diğer öncelik atanmış liste yok.');
+            $('#editPriorityInfo').show();
+        })
+        .catch(error => {
+            console.error('Öncelikler yüklenirken hata:', error);
+            $('#editPriorityList').html('Öncelik bilgisi yüklenemedi.');
+            $('#editPriorityInfo').show();
+        });
+}
+</script>
+{% endblock %} 

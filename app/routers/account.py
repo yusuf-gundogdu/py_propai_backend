@@ -30,6 +30,28 @@ async def list_accounts(
     result = await db.execute(query)
     return result.scalars().all()
 
+@router.post("/", response_model=AccountRead)
+async def create_account(account: AccountCreate, db: AsyncSession = Depends(get_db)):
+    # Hesap var mı kontrolü
+    result = await db.execute(select(Account).where(Account.udid == account.udid, Account.platform == account.platform))
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account already exists"
+        )
+    
+    new_account = Account(
+        udid=account.udid,
+        platform=account.platform,
+        level=0,
+        credit=100,
+        timestamp=int(time.time())
+    )
+    db.add(new_account)
+    await db.commit()
+    await db.refresh(new_account)
+    return new_account
+
 @router.get("/{platform}/{udid}", response_model=AccountRead)
 async def get_or_create_account(platform: PlatformEnum, udid: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Account).where(Account.udid == udid, Account.platform == platform))

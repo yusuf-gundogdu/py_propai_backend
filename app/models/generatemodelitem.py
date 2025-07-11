@@ -11,6 +11,4 @@ class GenerateModelItem(Base):
     priority = Column(Integer, nullable=False, unique=True)  # Öncelik sırası, asla null olamaz
     image_id = Column(Integer, ForeignKey("generatemodelitemimage.id"))  # Tek bir resim ID'si
     image = relationship("GenerateModelItemImage")
-    create_images = relationship("CreateImage", back_populates="model")
-    created_images = relationship("CreatedImage", back_populates="model")
-    image_histories = relationship("ImageHistory", back_populates="model") 
+    create_image_histories = relationship("CreateImageHistory", back_populates="model") 

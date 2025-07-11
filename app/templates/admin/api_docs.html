@@ -1,0 +1,349 @@
+{% extends "admin/base.html" %}
+
+{% block title %}API Dokümantasyon - PropAI Admin{% endblock %}
+{% block page_title %}API Dokümantasyon Yönetimi{% endblock %}
+
+{% block page_actions %}
+<a href="/docs" target="_blank" class="btn btn-primary btn-sm">
+    <i class="fas fa-external-link-alt me-2"></i>Swagger UI Aç
+</a>
+<a href="/redoc" target="_blank" class="btn btn-info btn-sm">
+    <i class="fas fa-book me-2"></i>ReDoc Aç
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- API Endpoint Listesi -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">API Endpoint'leri</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="apiTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Tag</th>
+                                <th>Açıklama</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-success">POST</span></td>
+                                <td>/api/auth/token</td>
+                                <td>Authentication</td>
+                                <td>Kullanıcı girişi ve token alma</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/users/</td>
+                                <td>Users</td>
+                                <td>Tüm kullanıcıları listele</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">POST</span></td>
+                                <td>/api/users/</td>
+                                <td>Users</td>
+                                <td>Yeni kullanıcı oluştur</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-danger">DELETE</span></td>
+                                <td>/api/users/{user_id}</td>
+                                <td>Users</td>
+                                <td>Kullanıcı sil</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/account/</td>
+                                <td>Account</td>
+                                <td>Hesap listesi</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/account/{platform}/{udid}</td>
+                                <td>Account</td>
+                                <td>Hesap getir veya oluştur</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning">PATCH</span></td>
+                                <td>/api/account/{account_id}</td>
+                                <td>Account</td>
+                                <td>Hesap güncelle</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/generatemodellist/</td>
+                                <td>GenerateModelList</td>
+                                <td>Model listesi</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">POST</span></td>
+                                <td>/api/generatemodellist/</td>
+                                <td>GenerateModelList</td>
+                                <td>Yeni model oluştur</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/createimage/</td>
+                                <td>CreateImage</td>
+                                <td>Resim oluşturma listesi</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">POST</span></td>
+                                <td>/api/createimage/</td>
+                                <td>CreateImage</td>
+                                <td>Yeni resim oluştur</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">GET</span></td>
+                                <td>/api/imagehistory/</td>
+                                <td>ImageHistory</td>
+                                <td>Resim geçmişi</td>
+                                <td><span class="badge bg-success">Aktif</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API İstatistikleri -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">API İstatistikleri</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam Endpoint</span>
+                        <span class="badge bg-primary">12</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>GET Endpoint'leri</span>
+                        <span class="badge bg-info">6</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>POST Endpoint'leri</span>
+                        <span class="badge bg-success">4</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>PATCH Endpoint'leri</span>
+                        <span class="badge bg-warning">1</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>DELETE Endpoint'leri</span>
+                        <span class="badge bg-danger">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Tag'leri -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">API Tag'leri</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="badge bg-primary me-2">Authentication</span>
+                    <small class="text-muted">Kimlik doğrulama işlemleri</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-success me-2">Users</span>
+                    <small class="text-muted">Kullanıcı yönetimi</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-info me-2">Account</span>
+                    <small class="text-muted">Hesap yönetimi</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-warning me-2">GenerateModelList</span>
+                    <small class="text-muted">AI model yönetimi</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-danger me-2">CreateImage</span>
+                    <small class="text-muted">Resim oluşturma</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-secondary me-2">ImageHistory</span>
+                    <small class="text-muted">Resim geçmişi</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hızlı Linkler -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Hızlı Linkler</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/docs" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt me-2"></i>Swagger UI
+                    </a>
+                    <a href="/redoc" target="_blank" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-book me-2"></i>ReDoc
+                    </a>
+                    <a href="/openapi.json" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-code me-2"></i>OpenAPI JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Test Modal -->
+<div class="modal fade" id="apiTestModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">API Test</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="testMethod" class="form-label">HTTP Method</label>
+                    <select class="form-select" id="testMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="testUrl" class="form-label">URL</label>
+                    <input type="text" class="form-control" id="testUrl" placeholder="https://your-api.com/api/endpoint">
+                </div>
+                <div class="mb-3">
+                    <label for="testHeaders" class="form-label">Headers (JSON)</label>
+                    <textarea class="form-control" id="testHeaders" rows="3" placeholder='{"Content-Type": "application/json"}'></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="testBody" class="form-label">Body (JSON)</label>
+                    <textarea class="form-control" id="testBody" rows="5" placeholder='{"key": "value"}'></textarea>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary" onclick="testApi()">
+                        <i class="fas fa-play me-2"></i>Test Et
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Response</label>
+                    <pre id="testResponse" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // API tablosuna tıklama olayları ekle
+    $('#apiTable tbody tr').click(function() {
+        const method = $(this).find('td:first').text().trim();
+        const endpoint = $(this).find('td:nth-child(2)').text().trim();
+        
+        $('#testMethod').val(method);
+        $('#testUrl').val(window.location.origin + endpoint);
+        $('#apiTestModal').modal('show');
+    });
+    
+    // Tablo satırlarını tıklanabilir yap
+    $('#apiTable tbody tr').css('cursor', 'pointer');
+    $('#apiTable tbody tr').hover(
+        function() { $(this).addClass('table-hover'); },
+        function() { $(this).removeClass('table-hover'); }
+    );
+});
+
+function testApi() {
+    const method = $('#testMethod').val();
+    const url = $('#testUrl').val();
+    const headersText = $('#testHeaders').val();
+    const bodyText = $('#testBody').val();
+    
+    if (!url) {
+        alert('URL gereklidir!');
+        return;
+    }
+    
+    let headers = {};
+    let body = null;
+    
+    try {
+        if (headersText) {
+            headers = JSON.parse(headersText);
+        }
+        if (bodyText && method !== 'GET') {
+            body = JSON.parse(bodyText);
+        }
+    } catch (e) {
+        alert('JSON formatı hatalı!');
+        return;
+    }
+    
+    const options = {
+        method: method,
+        headers: headers
+    };
+    
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+    
+    $('#testResponse').text('İstek gönderiliyor...');
+    
+    fetch(url, options)
+        .then(response => {
+            const responseText = `Status: ${response.status} ${response.statusText}\n\n`;
+            return response.text().then(text => {
+                try {
+                    const jsonResponse = JSON.parse(text);
+                    return responseText + JSON.stringify(jsonResponse, null, 2);
+                } catch {
+                    return responseText + text;
+                }
+            });
+        })
+        .then(result => {
+            $('#testResponse').text(result);
+        })
+        .catch(error => {
+            $('#testResponse').text('Hata: ' + error.message);
+        });
+}
+</script>
+{% endblock %} 

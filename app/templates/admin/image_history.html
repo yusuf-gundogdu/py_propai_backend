@@ -1,0 +1,763 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Resim Geçmişi - PropAI Admin{% endblock %}
+{% block page_title %}Resim Geçmişi Dashboard{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" onclick="exportHistory()">
+        <i class="fas fa-download me-2"></i>Excel İndir
+    </button>
+    <button class="btn btn-success btn-sm" onclick="refreshHistory()">
+        <i class="fas fa-sync-alt me-2"></i>Yenile
+    </button>
+    <button class="btn btn-info btn-sm" onclick="showAdvancedFilters()">
+        <i class="fas fa-filter me-2"></i>Gelişmiş Filtreler
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Gelişmiş Filtreler -->
+<div class="card shadow mb-4" id="advancedFilters" style="display: none;">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-search me-2"></i>Gelişmiş Filtreler
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label class="form-label">UDID</label>
+                <input type="text" class="form-control" id="filterUdid" placeholder="UDID ara...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Model</label>
+                <select class="form-select" id="filterModel">
+                    <option value="">Tüm Modeller</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Durum</label>
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="pending">Bekliyor</option>
+                    <option value="processing">İşleniyor</option>
+                    <option value="success">Başarılı</option>
+                    <option value="failed">Başarısız</option>
+                    <option value="cancelled">İptal</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Seviye</label>
+                <select class="form-select" id="filterLevel">
+                    <option value="">Tüm Seviyeler</option>
+                    <option value="0">Seviye 0</option>
+                    <option value="1">Seviye 1</option>
+                    <option value="2">Seviye 2</option>
+                    <option value="3">Seviye 3</option>
+                    <option value="4">Seviye 4</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tarih Aralığı</label>
+                <select class="form-select" id="filterDateRange">
+                    <option value="">Tüm Zamanlar</option>
+                    <option value="today">Bugün</option>
+                    <option value="week">Bu Hafta</option>
+                    <option value="month">Bu Ay</option>
+                    <option value="custom">Özel</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3" id="customDateRange" style="display: none;">
+            <div class="col-md-3">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input type="date" class="form-control" id="filterStartDate">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input type="date" class="form-control" id="filterEndDate">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-search me-2"></i>Filtrele
+                </button>
+                <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times me-2"></i>Temizle
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İstatistikler -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Toplam İşlem</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalProcesses">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Başarılı</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="successfulProcesses">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Bekleyen</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="pendingProcesses">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Başarısız</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="failedProcesses">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Ana Tablo -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Detaylı Resim Geçmişi</h6>
+        <div class="d-flex gap-2">
+            <select class="form-select form-select-sm" id="pageSize" style="width: auto;">
+                <option value="10">10 Kayıt</option>
+                <option value="25">25 Kayıt</option>
+                <option value="50">50 Kayıt</option>
+                <option value="100">100 Kayıt</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="historyTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>UDID</th>
+                        <th>Model</th>
+                        <th>Durum</th>
+                        <th>Kredi</th>
+                        <th>Seviye</th>
+                        <th>Model Resmi</th>
+                        <th>Orijinal Resim</th>
+                        <th>Generate Resim</th>
+                        <th>Oluşturulma</th>
+                        <th>Başlama</th>
+                        <th>Tamamlanma</th>
+                        <th>İşlem Süresi</th>
+                        <th>Dosya Boyutu</th>
+                        <th>Hata</th>
+                        <th>İşlemler</th>
+                        <th>Sil</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- JavaScript ile doldurulacak -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Sayfalama -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <span id="paginationInfo">0-0 / 0 kayıt</span>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="previousPage()" id="prevBtn" disabled>
+                    <i class="fas fa-chevron-left"></i> Önceki
+                </button>
+                <span class="mx-2" id="pageInfo">Sayfa 1</span>
+                <button class="btn btn-sm btn-outline-primary" onclick="nextPage()" id="nextBtn">
+                    Sonraki <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detay Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Resim İşlemi Detayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent">
+                    <!-- JavaScript ile doldurulacak -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="deleteHistoryFromModal()">
+                    <i class="fas fa-trash me-2"></i>Sil
+                </button>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadOriginal()">Orijinal İndir</button>
+                    <button type="button" class="btn btn-success" onclick="downloadGenerated()">Generate İndir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let pageSize = 10;
+let totalRecords = 0;
+let filteredData = [];
+let allData = [];
+
+$(document).ready(function() {
+    loadHistory();
+    loadModels();
+    
+    // Sayfa boyutu değişikliği
+    $('#pageSize').on('change', function() {
+        pageSize = parseInt($(this).val());
+        currentPage = 1;
+        displayData();
+    });
+    
+    // Tarih aralığı değişikliği
+    $('#filterDateRange').on('change', function() {
+        if ($(this).val() === 'custom') {
+            $('#customDateRange').show();
+        } else {
+            $('#customDateRange').hide();
+        }
+    });
+});
+
+function loadHistory() {
+    fetch('/api/createimagehistory/')
+        .then(response => response.json())
+        .then(data => {
+            allData = data;
+            filteredData = data;
+            updateStats();
+            displayData();
+            updateCharts();
+        })
+        .catch(error => {
+            console.error('Geçmiş yüklenirken hata:', error);
+        });
+}
+
+function loadModels() {
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            const modelSelect = $('#filterModel');
+            data.forEach(model => {
+                modelSelect.append(`<option value="${model.id}">${model.name} (${model.credit} kredi, Seviye: ${model.level})</option>`);
+            });
+        })
+        .catch(error => {
+            console.error('Modeller yüklenirken hata:', error);
+        });
+}
+
+function updateStats() {
+    const total = filteredData.length;
+    const successful = filteredData.filter(h => h.status === 'success').length;
+    const pending = filteredData.filter(h => h.status === 'pending').length;
+    const failed = filteredData.filter(h => h.status === 'failed').length;
+    
+    $('#totalProcesses').text(total);
+    $('#successfulProcesses').text(successful);
+    $('#pendingProcesses').text(pending);
+    $('#failedProcesses').text(failed);
+}
+
+function displayData() {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageData = filteredData.slice(startIndex, endIndex);
+    
+    const tbody = $('#historyTableBody');
+    tbody.empty();
+    
+    pageData.forEach(history => {
+        const statusBadge = getStatusBadge(history.status);
+        const createdDate = new Date(history.created_at).toLocaleString('tr-TR');
+        const startedDate = history.started_at ? new Date(history.started_at).toLocaleString('tr-TR') : '-';
+        const completedDate = history.completed_at ? new Date(history.completed_at).toLocaleString('tr-TR') : '-';
+        const processingTime = history.processing_time_seconds ? `${history.processing_time_seconds}s` : '-';
+        const fileSize = history.original_file_size ? formatFileSize(history.original_file_size) : '-';
+        const errorMessage = history.error_message ? history.error_message.substring(0, 50) + '...' : '-';
+        
+        const row = `
+            <tr>
+                <td><strong>#${history.id}</strong></td>
+                <td><code>${history.udid}</code></td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-info me-2">${history.model_id}</span>
+                        <small>${history.model?.name || 'Bilinmiyor'}</small>
+                        ${history.model?.image ? 
+                            `<img src="/images/generate_image/${history.model.image.fileName}" alt="Model" class="img-thumbnail ms-2" style="width: 30px; height: 30px; object-fit: cover;" onerror="this.style.display='none'">` : 
+                            '<i class="fas fa-image text-muted ms-2"></i>'
+                        }
+                    </div>
+                </td>
+                <td>${statusBadge}</td>
+                <td><span class="badge bg-warning">${history.credit} kredi</span></td>
+                <td><span class="badge bg-secondary">Seviye ${history.level}</span></td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${history.model?.image ? 
+                            `<img src="/images/generate_image/${history.model.image.fileName}" alt="Model" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">` : 
+                            '<i class="fas fa-image text-muted me-2"></i>'
+                        }
+                        <small>${history.model?.name || 'Bilinmiyor'}</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="/images/user_uploads/${history.original_image_path.split('/').pop()}" alt="Orijinal" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">
+                        <small>${history.original_file_name || 'Bilinmiyor'}</small>
+                    </div>
+                </td>
+                <td>
+                    ${history.generated_image_path ? 
+                        `<div class="d-flex align-items-center">
+                            <img src="/images/ai_generated/${history.generated_image_path.split('/').pop()}" alt="Generated" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">
+                            <small>${history.generated_file_name || history.generated_image_path.split('/').pop() || 'Bilinmiyor'}</small>
+                        </div>` : 
+                        '<span class="text-muted">Henüz oluşturulmadı</span>'
+                    }
+                </td>
+                <td><small>${createdDate}</small></td>
+                <td><small>${startedDate}</small></td>
+                <td><small>${completedDate}</small></td>
+                <td><small>${processingTime}</small></td>
+                <td><small>${fileSize}</small></td>
+                <td><small class="text-danger">${errorMessage}</small></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewDetail(${history.id})" title="Detay">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-info" onclick="downloadOriginal(${history.id})" title="Orijinal İndir">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        ${history.generated_image_path ? 
+                            `<button class="btn btn-outline-success" onclick="downloadGenerated(${history.id})" title="Generate İndir">
+                                <i class="fas fa-download"></i>
+                            </button>` : ''
+                        }
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteHistory(${history.id})" title="Sil">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+    
+    updatePagination();
+}
+
+function updatePagination() {
+    const totalPages = Math.ceil(filteredData.length / pageSize);
+    const startRecord = (currentPage - 1) * pageSize + 1;
+    const endRecord = Math.min(currentPage * pageSize, filteredData.length);
+    
+    $('#paginationInfo').text(`${startRecord}-${endRecord} / ${filteredData.length} kayıt`);
+    $('#pageInfo').text(`Sayfa ${currentPage} / ${totalPages}`);
+    
+    $('#prevBtn').prop('disabled', currentPage === 1);
+    $('#nextBtn').prop('disabled', currentPage === totalPages);
+}
+
+function previousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        displayData();
+    }
+}
+
+function nextPage() {
+    const totalPages = Math.ceil(filteredData.length / pageSize);
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayData();
+    }
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="badge bg-warning">Bekliyor</span>',
+        'processing': '<span class="badge bg-info">İşleniyor</span>',
+        'success': '<span class="badge bg-success">Başarılı</span>',
+        'failed': '<span class="badge bg-danger">Başarısız</span>',
+        'cancelled': '<span class="badge bg-secondary">İptal</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+function applyFilters() {
+    const udid = $('#filterUdid').val().toLowerCase();
+    const modelId = $('#filterModel').val();
+    const status = $('#filterStatus').val();
+    const level = $('#filterLevel').val();
+    const dateRange = $('#filterDateRange').val();
+    
+    filteredData = allData.filter(history => {
+        // UDID filtresi
+        if (udid && !history.udid.toLowerCase().includes(udid)) return false;
+        
+        // Model filtresi
+        if (modelId && history.model_id != modelId) return false;
+        
+        // Durum filtresi
+        if (status && history.status !== status) return false;
+        
+        // Seviye filtresi
+        if (level && history.level != level) return false;
+        
+        // Tarih filtresi
+        if (dateRange) {
+            const createdDate = new Date(history.created_at);
+            const today = new Date();
+            
+            switch(dateRange) {
+                case 'today':
+                    if (createdDate.toDateString() !== today.toDateString()) return false;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    if (createdDate < weekAgo) return false;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    if (createdDate < monthAgo) return false;
+                    break;
+                case 'custom':
+                    const startDate = new Date($('#filterStartDate').val());
+                    const endDate = new Date($('#filterEndDate').val());
+                    if (createdDate < startDate || createdDate > endDate) return false;
+                    break;
+            }
+        }
+        
+        return true;
+    });
+    
+    currentPage = 1;
+    updateStats();
+    displayData();
+}
+
+function clearFilters() {
+    $('#filterUdid').val('');
+    $('#filterModel').val('');
+    $('#filterStatus').val('');
+    $('#filterLevel').val('');
+    $('#filterDateRange').val('');
+    $('#filterStartDate').val('');
+    $('#filterEndDate').val('');
+    $('#customDateRange').hide();
+    
+    filteredData = allData;
+    currentPage = 1;
+    updateStats();
+    displayData();
+}
+
+function showAdvancedFilters() {
+    $('#advancedFilters').toggle();
+}
+
+function refreshHistory() {
+    loadHistory();
+}
+
+function viewDetail(historyId) {
+    fetch(`/api/createimagehistory/${historyId}`)
+        .then(response => response.json())
+        .then(data => {
+            const detailContent = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle me-2"></i>İşlem Bilgileri</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>İşlem ID:</strong></td><td>#${data.id}</td></tr>
+                            <tr><td><strong>UDID:</strong></td><td><code>${data.udid}</code></td></tr>
+                            <tr><td><strong>Model ID:</strong></td><td>${data.model_id}</td></tr>
+                            <tr><td><strong>Model Adı:</strong></td><td>
+                                <div class="d-flex align-items-center">
+                                    <span>${data.model?.name || 'Bilinmiyor'}</span>
+                                    ${data.model?.image ? 
+                                        `<img src="/images/generate_image/${data.model.image.fileName}" alt="Model" class="img-thumbnail ms-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'">` : 
+                                        '<i class="fas fa-image text-muted ms-2"></i>'
+                                    }
+                                </div>
+                            </td></tr>
+                            <tr><td><strong>Durum:</strong></td><td>${getStatusBadge(data.status)}</td></tr>
+                            <tr><td><strong>Harcanan Kredi:</strong></td><td><span class="badge bg-warning">${data.credit} kredi</span></td></tr>
+                            <tr><td><strong>Kullanıcı Seviyesi:</strong></td><td><span class="badge bg-secondary">Seviye ${data.level}</span></td></tr>
+                            <tr><td><strong>Oluşturulma:</strong></td><td>${new Date(data.created_at).toLocaleString('tr-TR')}</td></tr>
+                            ${data.started_at ? `<tr><td><strong>Başlama:</strong></td><td>${new Date(data.started_at).toLocaleString('tr-TR')}</td></tr>` : ''}
+                            ${data.completed_at ? `<tr><td><strong>Tamamlanma:</strong></td><td>${new Date(data.completed_at).toLocaleString('tr-TR')}</td></tr>` : ''}
+                            ${data.processing_time_seconds ? `<tr><td><strong>İşlem Süresi:</strong></td><td>${data.processing_time_seconds} saniye</td></tr>` : ''}
+                        </table>
+                        
+                        ${data.error_message ? `
+                            <h6 class="mt-3"><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Hata Mesajı</h6>
+                            <div class="alert alert-danger">
+                                ${data.error_message}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-images me-2"></i>Resimler</h6>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6>Model Resmi</h6>
+                                ${data.model?.image ? 
+                                    `<img src="/images/generate_image/${data.model.image.fileName}" alt="Model" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Model resmi yüklenemedi (Dosya: ${data.model.image.fileName})</div>'>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <strong>Model:</strong> ${data.model?.name || 'Bilinmiyor'}<br>
+                                            <strong>Kredi:</strong> ${data.model?.credit || 'Bilinmiyor'}<br>
+                                            <strong>Seviye:</strong> ${data.model?.level || 'Bilinmiyor'}<br>
+                                            <strong>Resim ID:</strong> ${data.model.image.id}<br>
+                                            <strong>Resim Yolu:</strong> ${data.model.image.filePath || 'Bilinmiyor'}<br>
+                                            <strong>URL:</strong> /images/generate_image/${data.model.image.fileName}
+                                        </small>
+                                    </div>` : 
+                                    '<div class="alert alert-warning">Model resmi yok (Model ID: ' + (data.model?.id || 'Bilinmiyor') + ')</div>'
+                                }
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <h6>Orijinal Resim</h6>
+                                <img src="/images/user_uploads/${data.original_image_path.split('/').pop()}" alt="Orijinal" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Resim yüklenemedi (Dosya: ${data.original_image_path.split('/').pop()})</div>'">
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Dosya:</strong> ${data.original_file_name || 'Bilinmiyor'}<br>
+                                        <strong>Boyut:</strong> ${data.original_file_size ? formatFileSize(data.original_file_size) : 'Bilinmiyor'}<br>
+                                        <strong>Yol:</strong> ${data.original_image_path}<br>
+                                        <strong>URL:</strong> /images/user_uploads/${data.original_image_path.split('/').pop()}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <h6>Generate Edilmiş Resim</h6>
+                                ${data.generated_image_path ? 
+                                    `<img src="/images/ai_generated/${data.generated_image_path.split('/').pop()}" alt="Generated" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Generate edilmiş resim yüklenemedi (Dosya: ${data.generated_image_path.split('/').pop()})</div>'>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <strong>Dosya:</strong> ${data.generated_file_name || data.generated_image_path.split('/').pop() || 'Bilinmiyor'}<br>
+                                            <strong>Boyut:</strong> ${data.generated_file_size ? formatFileSize(data.generated_file_size) : 'Bilinmiyor'}<br>
+                                            <strong>Yol:</strong> ${data.generated_image_path}<br>
+                                            <strong>URL:</strong> /images/ai_generated/${data.generated_image_path.split('/').pop()}
+                                        </small>
+                                    </div>` : 
+                                    '<div class="alert alert-warning">Henüz generate edilmedi</div>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#detailContent').html(detailContent);
+            $('#detailModal').modal('show');
+        })
+        .catch(error => {
+            console.error('Detay yüklenirken hata:', error);
+            alert('Hata: ' + error.message);
+        });
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function downloadOriginal(historyId) {
+    // İndirme işlemi (gerçek uygulamada implement edilecek)
+    alert('Orijinal resim indirme özelliği yakında eklenecek');
+}
+
+function downloadGenerated(historyId) {
+    // İndirme işlemi (gerçek uygulamada implement edilecek)
+    alert('Generate edilmiş resim indirme özelliği yakında eklenecek');
+}
+
+function deleteHistory(historyId) {
+    if (confirm('Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+        fetch(`/api/createimagehistory/${historyId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('İşlem başarıyla silindi!');
+                loadHistory(); // Listeyi yenile
+            } else {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.detail || 'Silme işlemi başarısız');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Silme hatası:', error);
+            alert('Silme işlemi başarısız: ' + error.message);
+        });
+    }
+}
+
+function exportHistory() {
+    // Excel export işlemi (gerçek uygulamada implement edilecek)
+    alert('Excel export özelliği yakında eklenecek');
+}
+
+let statusChart, dailyChart;
+
+function createCharts() {
+    // Durum dağılımı grafiği
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Başarılı', 'Bekliyor', 'Başarısız', 'İşleniyor', 'İptal'],
+            datasets: [{
+                data: [0, 0, 0, 0, 0],
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Günlük işlem sayısı grafiği
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    dailyChart = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Günlük İşlem Sayısı',
+                data: [],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function updateCharts() {
+    // Durum dağılımı güncelleme
+    const statusData = [
+        filteredData.filter(h => h.status === 'success').length,
+        filteredData.filter(h => h.status === 'pending').length,
+        filteredData.filter(h => h.status === 'failed').length,
+        filteredData.filter(h => h.status === 'processing').length,
+        filteredData.filter(h => h.status === 'cancelled').length
+    ];
+    
+    // Günlük işlem sayısı hesaplama
+    const dailyData = {};
+    filteredData.forEach(history => {
+        const date = new Date(history.created_at).toDateString();
+        dailyData[date] = (dailyData[date] || 0) + 1;
+    });
+    
+    const dailyLabels = Object.keys(dailyData).slice(-7); // Son 7 gün
+    const dailyValues = dailyLabels.map(date => dailyData[date] || 0);
+    
+    // Grafikleri güncelle
+    if (statusChart) {
+        statusChart.data.datasets[0].data = statusData;
+        statusChart.update();
+    }
+    
+    if (dailyChart) {
+        dailyChart.data.labels = dailyLabels;
+        dailyChart.data.datasets[0].data = dailyValues;
+        dailyChart.update();
+    }
+}
+</script>
+{% endblock %} 

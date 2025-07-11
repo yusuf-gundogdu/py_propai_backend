@@ -1,0 +1,529 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Resim Oluşturma - PropAI Admin{% endblock %}
+{% block page_title %}Resim Oluşturma{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createImageModal">
+    <i class="fas fa-plus me-2"></i>Yeni Resim Oluştur
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Resim Oluşturma Formu -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Resim Oluşturma</h6>
+            </div>
+            <div class="card-body">
+                <form id="createImageForm">
+                    <div class="mb-3">
+                        <label for="uploadImage" class="form-label">Resim Yükle</label>
+                        <input type="file" class="form-control" id="uploadImage" accept="image/*" required>
+                        <small class="form-text text-muted">Yüklemek istediğiniz resmi seçin (JPG, PNG, GIF)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="selectedModel" class="form-label">Generate Modeli Seçin</label>
+                        <select class="form-select" id="selectedModel" required>
+                            <option value="">Model Seçin...</option>
+                        </select>
+                        <small class="form-text text-muted">Hangi AI modeli ile resminizi generate etmek istiyorsunuz?</small>
+                    </div>
+                    
+
+                    
+                    <div class="mb-3">
+                        <label for="udid" class="form-label">UDID (Test için)</label>
+                        <input type="text" class="form-control" id="udid" value="test-udid-123" placeholder="UDID girin">
+                        <small class="form-text text-muted">Test amaçlı UDID (gerçek uygulamada otomatik gelecek)</small>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-magic me-2"></i>Resmi Generate Et
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Son İşlemler -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Son İşlemler</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="recentHistoryTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Model</th>
+                                <th>Durum</th>
+                                <th>Kredi</th>
+                                <th>Tarih</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentHistoryTableBody">
+                            <!-- JavaScript ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">İstatistikler</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam İşlem</span>
+                        <span class="badge bg-primary" id="totalProcesses">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Başarılı</span>
+                        <span class="badge bg-success" id="successfulProcesses">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Bekliyor</span>
+                        <span class="badge bg-warning" id="pendingProcesses">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Başarısız</span>
+                        <span class="badge bg-danger" id="failedProcesses">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Listesi -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Mevcut Modeller</h6>
+            </div>
+            <div class="card-body">
+                <div id="modelList">
+                    <!-- JavaScript ile doldurulacak -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sonuç Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate Sonucu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultContent">
+                    <!-- JavaScript ile doldurulacak -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" onclick="downloadResult()">İndir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    loadModels();
+    loadRecentHistory();
+    loadStats();
+});
+
+function loadModels() {
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            const modelSelect = $('#selectedModel');
+            const modelList = $('#modelList');
+            
+            modelSelect.empty().append('<option value="">Model Seçin...</option>');
+            modelList.empty();
+            
+            data.forEach(model => {
+                // Select için option
+                modelSelect.append(`<option value="${model.id}">${model.name} (${model.credit} kredi, Seviye: ${model.level})</option>`);
+                
+                // Model listesi için card
+                const modelCard = `
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <h6 class="card-title mb-1">${model.name}</h6>
+                            <small class="text-muted">
+                                Kredi: ${model.credit} | Seviye: ${model.level} | Öncelik: ${model.priority}
+                            </small>
+                        </div>
+                    </div>
+                `;
+                modelList.append(modelCard);
+            });
+        })
+        .catch(error => {
+            console.error('Modeller yüklenirken hata:', error);
+        });
+}
+
+function loadRecentHistory() {
+    fetch('/api/createimagehistory/?limit=10')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#recentHistoryTableBody');
+            tbody.empty();
+            
+            data.forEach(history => {
+                const statusBadge = getStatusBadge(history.status);
+                const createdDate = new Date(history.created_at).toLocaleString('tr-TR');
+                
+                const row = `
+                    <tr>
+                        <td>${history.id}</td>
+                        <td>${history.model_id}</td>
+                        <td>${statusBadge}</td>
+                        <td><span class="badge bg-info">${history.credit}</span></td>
+                        <td><small>${createdDate}</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewResult(${history.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        })
+        .catch(error => {
+            console.error('Geçmiş yüklenirken hata:', error);
+        });
+}
+
+function loadStats() {
+    fetch('/api/createimagehistory/')
+        .then(response => response.json())
+        .then(data => {
+            let total = data.length;
+            let successful = data.filter(h => h.status === 'success').length;
+            let pending = data.filter(h => h.status === 'pending').length;
+            let failed = data.filter(h => h.status === 'failed').length;
+            
+            $('#totalProcesses').text(total);
+            $('#successfulProcesses').text(successful);
+            $('#pendingProcesses').text(pending);
+            $('#failedProcesses').text(failed);
+        })
+        .catch(error => {
+            console.error('İstatistikler yüklenirken hata:', error);
+        });
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="badge bg-warning">Bekliyor</span>',
+        'processing': '<span class="badge bg-info">İşleniyor</span>',
+        'success': '<span class="badge bg-success">Başarılı</span>',
+        'failed': '<span class="badge bg-danger">Başarısız</span>',
+        'cancelled': '<span class="badge bg-secondary">İptal</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+$('#createImageForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const fileInput = $('#uploadImage')[0];
+    const modelId = $('#selectedModel').val();
+    const udid = $('#udid').val();
+    
+    if (!fileInput.files[0]) {
+        alert('Lütfen bir resim seçin');
+        return;
+    }
+    
+    if (!modelId) {
+        alert('Lütfen bir model seçin');
+        return;
+    }
+    
+    // Dosyayı yükle
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    
+    // Önce kullanıcı resmini yükle
+    fetch('/api/userupload/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(imageData => {
+        // Sonra CreateImageHistory kaydı oluştur
+        const historyData = {
+            udid: udid,
+            model_id: parseInt(modelId),
+            original_image_path: imageData.filePath,
+            original_file_name: imageData.fileName,
+            original_file_size: imageData.fileSize
+        };
+        
+        return fetch('/api/createimagehistory/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(historyData)
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.detail || 'API hatası');
+            });
+        }
+        return response.json();
+    })
+    .then(historyData => {
+        console.log('API Response:', historyData);
+        alert('Resim oluşturma işlemi başlatıldı! ID: ' + historyData.id);
+        
+        // Formu temizle
+        $('#createImageForm')[0].reset();
+        
+        // Listeleri yenile
+        loadRecentHistory();
+        loadStats();
+        
+        // Generate işlemini başlat
+        startGeneration(historyData.id);
+    })
+    .catch(error => {
+        console.error('Resim oluşturma hatası:', error);
+        // Spesifik hata mesajını göster
+        alert('Hata: ' + error.message);
+    });
+});
+
+function startGeneration(historyId) {
+    // Generate işlemini başlat
+    fetch(`/api/generate/start/${historyId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Generate başlatıldı:', data);
+        
+        // Durumu kontrol etmeye başla
+        checkGenerationStatus(historyId);
+    })
+    .catch(error => {
+        console.error('Generate başlatma hatası:', error);
+        alert('Generate işlemi başlatılırken hata oluştu');
+    });
+}
+
+function checkGenerationStatus(historyId) {
+    const checkStatus = () => {
+        fetch(`/api/generate/status/${historyId}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Durum kontrolü:', data);
+            
+            if (data.status === 'processing') {
+                // Hala işleniyor, 2 saniye sonra tekrar kontrol et
+                setTimeout(checkStatus, 2000);
+            } else if (data.status === 'success') {
+                // Başarılı
+                showGenerationResult(historyId, data, true);
+                loadRecentHistory();
+                loadStats();
+            } else if (data.status === 'failed') {
+                // Başarısız
+                showGenerationResult(historyId, data, false);
+                loadRecentHistory();
+                loadStats();
+            }
+        })
+        .catch(error => {
+            console.error('Durum kontrolü hatası:', error);
+        });
+    };
+    
+    // İlk kontrolü başlat
+    checkStatus();
+}
+
+function showGenerationResult(historyId, data, isSuccess) {
+    const statusBadge = isSuccess ? 
+        '<span class="badge bg-success">Başarılı</span>' : 
+        '<span class="badge bg-danger">Başarısız</span>';
+    
+    // Resim yollarını düzelt
+    let originalImageSrc = '';
+    let generatedImageSrc = '';
+    
+    // Orijinal resim yolu
+    if (data.original_image_path) {
+        if (data.original_image_path.startsWith('user_uploads/')) {
+            const filename = data.original_image_path.split('/').pop();
+            originalImageSrc = `/images/user_uploads/${filename}`;
+        } else {
+            originalImageSrc = data.original_image_path;
+        }
+    }
+    
+    // Generate edilmiş resim yolu
+    if (isSuccess && data.generated_image_path) {
+        if (data.generated_image_path.startsWith('/api/aigenerated/')) {
+            const filename = data.generated_image_path.split('/').pop();
+            generatedImageSrc = `/images/ai_generated/${filename}`;
+        } else if (data.generated_image_path.startsWith('ai_generated/')) {
+            const filename = data.generated_image_path.split('/').pop();
+            generatedImageSrc = `/images/ai_generated/${filename}`;
+        } else {
+            generatedImageSrc = data.generated_image_path;
+        }
+    }
+    
+    const resultContent = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Orijinal Resim</h6>
+                ${originalImageSrc ? 
+                    `<img src="${originalImageSrc}" alt="Orijinal" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                     <div class="alert alert-warning" style="display:none;">Resim yüklenemedi</div>` : 
+                    '<div class="alert alert-warning">Orijinal resim bulunamadı</div>'
+                }
+            </div>
+            <div class="col-md-6">
+                <h6>Generate Edilmiş Resim</h6>
+                ${isSuccess && generatedImageSrc ? 
+                    `<img src="${generatedImageSrc}" alt="Generated" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                     <div class="alert alert-warning" style="display:none;">Resim yüklenemedi</div>` : 
+                    '<div class="alert alert-warning">Generate edilemedi</div>'
+                }
+            </div>
+        </div>
+        <div class="alert alert-${isSuccess ? 'success' : 'danger'}">
+            <i class="fas fa-${isSuccess ? 'check-circle' : 'exclamation-triangle'}"></i> 
+            ${isSuccess ? 'Resim başarıyla generate edildi!' : 'Generate işlemi başarısız oldu!'}
+        </div>
+        <table class="table table-sm">
+            <tr><td>İşlem ID:</td><td>${historyId}</td></tr>
+            <tr><td>Model:</td><td>${data.model || 'Bilinmiyor'}</td></tr>
+            <tr><td>Durum:</td><td>${statusBadge}</td></tr>
+            <tr><td>İşlem Süresi:</td><td>${data.processing_time_seconds || 0} saniye</td></tr>
+            <tr><td>Harcanan Kredi:</td><td>${data.credit || 0}</td></tr>
+            <tr><td>Orijinal Dosya:</td><td>${data.original_file_name || 'Bilinmiyor'}</td></tr>
+            <tr><td>Generate Dosya:</td><td>${data.generated_file_name || 'Henüz oluşturulmadı'}</td></tr>
+            ${data.error_message ? `<tr><td>Hata:</td><td>${data.error_message}</td></tr>` : ''}
+        </table>
+    `;
+    
+    $('#resultContent').html(resultContent);
+    $('#resultModal').modal('show');
+}
+
+function viewResult(historyId) {
+    fetch(`/api/createimagehistory/${historyId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Resim yollarını düzelt
+            let originalImageSrc = '';
+            let generatedImageSrc = '';
+            
+            // Orijinal resim yolu
+            if (data.original_image_path) {
+                if (data.original_image_path.startsWith('user_uploads/')) {
+                    // Sadece dosya adını al
+                    const filename = data.original_image_path.split('/').pop();
+                    originalImageSrc = `/images/user_uploads/${filename}`;
+                } else {
+                    originalImageSrc = data.original_image_path;
+                }
+            }
+            
+            // Generate edilmiş resim yolu
+            if (data.generated_image_path) {
+                if (data.generated_image_path.startsWith('/api/aigenerated/')) {
+                    // URL'den dosya adını al
+                    const filename = data.generated_image_path.split('/').pop();
+                    generatedImageSrc = `/images/ai_generated/${filename}`;
+                } else if (data.generated_image_path.startsWith('ai_generated/')) {
+                    // Sadece dosya adını al
+                    const filename = data.generated_image_path.split('/').pop();
+                    generatedImageSrc = `/images/ai_generated/${filename}`;
+                } else {
+                    generatedImageSrc = data.generated_image_path;
+                }
+            }
+            
+            const resultContent = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Orijinal Resim</h6>
+                        ${originalImageSrc ? 
+                            `<img src="${originalImageSrc}" alt="Orijinal" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                             <div class="alert alert-warning" style="display:none;">Resim yüklenemedi</div>` : 
+                            '<div class="alert alert-warning">Orijinal resim bulunamadı</div>'
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Generate Edilmiş Resim</h6>
+                        ${generatedImageSrc ? 
+                            `<img src="${generatedImageSrc}" alt="Generated" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                             <div class="alert alert-warning" style="display:none;">Resim yüklenemedi</div>` : 
+                            '<div class="alert alert-warning">Henüz generate edilmedi</div>'
+                        }
+                    </div>
+                </div>
+                <div class="alert alert-${data.status === 'success' ? 'success' : 'info'}">
+                    <i class="fas fa-info-circle"></i> Durum: ${data.status}
+                </div>
+                <table class="table table-sm">
+                    <tr><td>İşlem ID:</td><td>${data.id}</td></tr>
+                    <tr><td>Model ID:</td><td>${data.model_id}</td></tr>
+                    <tr><td>Durum:</td><td>${getStatusBadge(data.status)}</td></tr>
+                    <tr><td>Harcanan Kredi:</td><td>${data.credit}</td></tr>
+                    <tr><td>Oluşturulma:</td><td>${new Date(data.created_at).toLocaleString('tr-TR')}</td></tr>
+                    <tr><td>Orijinal Dosya:</td><td>${data.original_file_name || 'Bilinmiyor'}</td></tr>
+                    <tr><td>Generate Dosya:</td><td>${data.generated_file_name || 'Henüz oluşturulmadı'}</td></tr>
+                </table>
+            `;
+            
+            $('#resultContent').html(resultContent);
+            $('#resultModal').modal('show');
+        })
+        .catch(error => {
+            console.error('Sonuç yüklenirken hata:', error);
+            alert('Sonuç yüklenirken hata oluştu');
+        });
+}
+
+function downloadResult() {
+    // İndirme işlemi (gerçek uygulamada implement edilecek)
+    alert('İndirme özelliği yakında eklenecek');
+}
+</script>
+{% endblock %} 

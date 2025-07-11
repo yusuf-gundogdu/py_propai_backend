@@ -1,0 +1,245 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - PropAI Admin{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" onclick="refreshStats()">
+        <i class="fas fa-sync-alt me-2"></i>Yenile
+    </button>
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-bars me-2"></i>Hızlı Menü
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/admin/users">
+                <i class="fas fa-users me-2"></i>Kullanıcı Yönetimi
+            </a></li>
+            <li><a class="dropdown-item" href="/admin/accounts">
+                <i class="fas fa-user-circle me-2"></i>Hesap Yönetimi
+            </a></li>
+            <li><a class="dropdown-item" href="/admin/models">
+                <i class="fas fa-brain me-2"></i>Model Yönetimi
+            </a></li>
+            <li><a class="dropdown-item" href="/admin/images">
+                <i class="fas fa-images me-2"></i>Resim Yönetimi
+            </a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/admin/api-docs">
+                <i class="fas fa-book me-2"></i>API Dokümantasyon
+            </a></li>
+            <li><a class="dropdown-item" href="/docs" target="_blank">
+                <i class="fas fa-external-link-alt me-2"></i>Swagger UI
+            </a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- İstatistik Kartları -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">
+                            Toplam Kullanıcı
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold" id="total-users">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">
+                            Aktif Kullanıcı
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold" id="active-users">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-check fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">
+                            Toplam Hesap
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold" id="total-accounts">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-circle fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">
+                            Toplam Resim
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold" id="total-images">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-images fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Grafik -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Son 7 Gün Resim Oluşturma</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="imageChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hızlı İşlemler -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Hızlı İşlemler</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/users" class="btn btn-primary btn-sm">
+                        <i class="fas fa-users me-2"></i>Kullanıcı Yönetimi
+                    </a>
+                    <a href="/admin/accounts" class="btn btn-info btn-sm">
+                        <i class="fas fa-user-circle me-2"></i>Hesap Yönetimi
+                    </a>
+                    <a href="/admin/models" class="btn btn-success btn-sm">
+                        <i class="fas fa-brain me-2"></i>Model Yönetimi
+                    </a>
+                    <a href="/admin/images" class="btn btn-warning btn-sm">
+                        <i class="fas fa-images me-2"></i>Resim Yönetimi
+                    </a>
+                    <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-book me-2"></i>API Dokümantasyon
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sistem Durumu -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Sistem Durumu</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>API Sunucusu</span>
+                        <span class="badge bg-success">Aktif</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Veritabanı</span>
+                        <span class="badge bg-success">Bağlı</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>AI Modelleri</span>
+                        <span class="badge bg-success">Hazır</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // İstatistikleri yükle
+    loadStats();
+    
+    // Grafik oluştur
+    createChart();
+});
+
+function loadStats() {
+    fetch('/admin/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            $('#total-users').text(data.total_users);
+            $('#active-users').text(data.active_users);
+            $('#total-accounts').text(data.total_accounts);
+            $('#total-images').text(data.total_images);
+        })
+        .catch(error => {
+            console.error('İstatistikler yüklenirken hata:', error);
+        });
+}
+
+function refreshStats() {
+    loadStats();
+    createChart();
+}
+
+function createChart() {
+    const ctx = document.getElementById('imageChart').getContext('2d');
+    
+    // Örnek veri - gerçek uygulamada API'den gelecek
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'],
+            datasets: [{
+                label: 'Oluşturulan Resimler',
+                data: [12, 19, 3, 5, 2, 3, 7],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %} 

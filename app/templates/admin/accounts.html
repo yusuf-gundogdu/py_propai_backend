@@ -1,0 +1,323 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Hesap Yönetimi - PropAI Admin{% endblock %}
+{% block page_title %}Hesap Yönetimi{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+    <i class="fas fa-plus me-2"></i>Yeni Hesap
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Hesap Listesi</h6>
+    </div>
+    <div class="card-body">
+        <!-- Filtreler -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="udidFilter" placeholder="UDID Ara...">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="platformFilter">
+                    <option value="">Tüm Platformlar</option>
+                    <option value="ANDROID">ANDROID</option>
+                    <option value="IOS">IOS</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary" onclick="applyFilters()">
+                    <i class="fas fa-filter me-2"></i>Filtrele
+                </button>
+                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times me-2"></i>Temizle
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered" id="accountsTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>UDID</th>
+                        <th>Platform</th>
+                        <th>Seviye</th>
+                        <th>Kredi</th>
+                        <th>Oluşturulma Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="accountsTableBody">
+                    <!-- JavaScript ile doldurulacak -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Hesap Modal -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Hesap Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addAccountForm">
+                    <div class="mb-3">
+                        <label for="udid" class="form-label">UDID</label>
+                        <input type="text" class="form-control" id="udid" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="platform" class="form-label">Platform</label>
+                        <select class="form-select" id="platform" required>
+                            <option value="">Platform Seçin</option>
+                            <option value="ANDROID">ANDROID</option>
+                            <option value="IOS">IOS</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="level" class="form-label">Seviye</label>
+                        <input type="number" class="form-control" id="level" value="0" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="credit" class="form-label">Kredi</label>
+                        <input type="number" class="form-control" id="credit" value="100" min="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addAccount()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hesap Düzenleme Modal -->
+<div class="modal fade" id="editAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hesap Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAccountForm">
+                    <input type="hidden" id="editAccountId">
+                    <div class="mb-3">
+                        <label for="editUdid" class="form-label">UDID</label>
+                        <input type="text" class="form-control" id="editUdid" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPlatform" class="form-label">Platform</label>
+                        <select class="form-select" id="editPlatform" required>
+                            <option value="ANDROID">ANDROID</option>
+                            <option value="IOS">IOS</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editLevel" class="form-label">Seviye</label>
+                        <input type="number" class="form-control" id="editLevel" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCredit" class="form-label">Kredi</label>
+                        <input type="number" class="form-control" id="editCredit" min="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateAccount()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    loadAccounts();
+});
+
+function loadAccounts(udid = '', platform = '') {
+    let url = '/api/account/';
+    const params = new URLSearchParams();
+    if (udid) params.append('udid', udid);
+    if (platform) params.append('platform', platform);
+    if (params.toString()) url += '?' + params.toString();
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#accountsTableBody');
+            tbody.empty();
+            
+            data.forEach(account => {
+                const row = `
+                    <tr>
+                        <td>${account.id}</td>
+                        <td>${account.udid}</td>
+                        <td>
+                            <span class="badge bg-${getPlatformBadgeColor(account.platform)}">
+                                ${account.platform.toUpperCase()}
+                            </span>
+                        </td>
+                        <td>${account.level}</td>
+                        <td>${account.credit}</td>
+                        <td>${new Date(account.timestamp * 1000).toLocaleDateString('tr-TR')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount(${account.id}, '${account.udid}', '${account.platform}', ${account.level}, ${account.credit})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${account.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        })
+        .catch(error => {
+            console.error('Hesaplar yüklenirken hata:', error);
+            $('#accountsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Hesaplar yüklenirken hata oluştu</td></tr>');
+        });
+}
+
+function getPlatformBadgeColor(platform) {
+    switch(platform) {
+        case 'ANDROID': return 'success';
+        case 'IOS': return 'primary';
+        default: return 'secondary';
+    }
+}
+
+function applyFilters() {
+    const udid = $('#udidFilter').val();
+    const platform = $('#platformFilter').val();
+    loadAccounts(udid, platform);
+}
+
+function clearFilters() {
+    $('#udidFilter').val('');
+    $('#platformFilter').val('');
+    loadAccounts();
+}
+
+function addAccount() {
+    const udid = $('#udid').val();
+    const platform = $('#platform').val();
+    const level = parseInt($('#level').val()) || 0;
+    const credit = parseInt($('#credit').val()) || 100;
+    
+    if (!udid || !platform) {
+        alert('UDID ve platform gereklidir!');
+        return;
+    }
+    
+    fetch('/api/account/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            udid: udid,
+            platform: platform,
+            level: level,
+            credit: credit
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#addAccountModal').modal('hide');
+            $('#addAccountForm')[0].reset();
+            loadAccounts();
+            alert('Hesap başarıyla eklendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Hesap eklenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        alert('Hata: ' + error.message);
+    });
+}
+
+function editAccount(id, udid, platform, level, credit) {
+    $('#editAccountId').val(id);
+    $('#editUdid').val(udid);
+    $('#editPlatform').val(platform);
+    $('#editLevel').val(level);
+    $('#editCredit').val(credit);
+    $('#editAccountModal').modal('show');
+}
+
+function updateAccount() {
+    const id = $('#editAccountId').val();
+    const udid = $('#editUdid').val();
+    const platform = $('#editPlatform').val();
+    const level = parseInt($('#editLevel').val()) || 0;
+    const credit = parseInt($('#editCredit').val()) || 0;
+    
+    if (!udid || !platform) {
+        alert('UDID ve platform gereklidir!');
+        return;
+    }
+    
+    fetch(`/api/account/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            udid: udid,
+            platform: platform,
+            level: level,
+            credit: credit
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#editAccountModal').modal('hide');
+            loadAccounts();
+            alert('Hesap başarıyla güncellendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Hesap güncellenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        alert('Hata: ' + error.message);
+    });
+}
+
+function deleteAccount(id) {
+    if (confirm('Bu hesabı silmek istediğinizden emin misiniz?')) {
+        fetch(`/api/account/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadAccounts();
+                alert('Hesap başarıyla silindi!');
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.detail || 'Hesap silinirken hata oluştu');
+                });
+            }
+        })
+        .catch(error => {
+            alert('Hata: ' + error.message);
+        });
+    }
+}
+</script>
+{% endblock %} 

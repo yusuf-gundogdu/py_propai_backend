@@ -1,0 +1,264 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Model Resimleri - PropAI Admin{% endblock %}
+{% block page_title %}Model Resimleri{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModelImageModal">
+    <i class="fas fa-plus me-2"></i>Yeni Model Resmi
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Model Resimleri Listesi -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Resimleri Listesi</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="modelImagesTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+        
+                                <th>Dosya Adı</th>
+                                <th>Resim Önizleme</th>
+                                <th>Dosya Boyutu</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modelImagesTableBody">
+                            <!-- JavaScript ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Resimleri İstatistikleri -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Resimleri İstatistikleri</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam Resim</span>
+                        <span class="badge bg-primary" id="totalImages">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Aktif Resimler</span>
+                        <span class="badge bg-success" id="activeImages">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Pasif Resimler</span>
+                        <span class="badge bg-warning" id="inactiveImages">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Resimleri Durumu -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Resimleri Durumu</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="modelImagesStatusChart" width="100" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Model Resmi Modal -->
+<div class="modal fade" id="addModelImageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Model Resmi Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addModelImageForm">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Resim Dosyası</label>
+                        <input type="file" class="form-control" id="imageFile" accept="image/*" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="imageActive" checked>
+                            <label class="form-check-label" for="imageActive">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addModelImage()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Resim Önizleme Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Resim Önizleme</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="previewImage" src="" alt="Resim Önizleme" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    loadModelImages();
+    createModelImagesChart();
+});
+
+function loadModelImages() {
+    fetch('/api/generatemodelitemimages/')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#modelImagesTableBody');
+            tbody.empty();
+            
+            data.forEach(image => {
+                const row = `
+                    <tr>
+                        <td>${image.id}</td>
+                        <td>${image.fileName}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="previewImage('/api/generatemodelitemimages/${image.id}')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">${image.fileSize} bytes</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteModelImage(${image.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            // İstatistikleri güncelle
+            $('#totalImages').text(data.length);
+            $('#activeImages').text(data.length);
+            $('#inactiveImages').text(0);
+        })
+        .catch(error => {
+            console.error('Model resimleri yüklenirken hata:', error);
+            $('#modelImagesTableBody').html('<tr><td colspan="5" class="text-center text-danger">Veri yüklenirken hata oluştu</td></tr>');
+        });
+}
+
+
+
+function createModelImagesChart() {
+    const ctx = document.getElementById('modelImagesStatusChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Aktif', 'Pasif'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#28a745', '#ffc107'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function previewImage(imagePath) {
+    $('#previewImage').attr('src', imagePath);
+    $('#imagePreviewModal').modal('show');
+}
+
+function addModelImage() {
+    const fileInput = document.getElementById('imageFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Lütfen bir resim dosyası seçin');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/api/generatemodelitemimages/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        $('#addModelImageModal').modal('hide');
+        $('#addModelImageForm')[0].reset();
+        loadModelImages();
+        alert('Resim başarıyla yüklendi');
+    })
+    .catch(error => {
+        console.error('Resim yüklenirken hata:', error);
+        alert('Resim yüklenirken hata oluştu');
+    });
+}
+
+
+
+
+
+function deleteModelImage(id) {
+    if (confirm('Bu resmi silmek istediğinizden emin misiniz?')) {
+        fetch(`/api/generatemodelitemimages/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadModelImages();
+                alert('Resim başarıyla silindi');
+            } else {
+                alert('Resim silinirken hata oluştu');
+            }
+        })
+        .catch(error => {
+            console.error('Resim silinirken hata:', error);
+            alert('Resim silinirken hata oluştu');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PropAI - AI Resim Oluşturma Platformu</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .hero-section {
+            padding: 100px 0;
+            color: white;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(10px);
+        }
+        
+        .navbar-brand {
+            color: white !important;
+            font-weight: 700;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        
+        .nav-link:hover {
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-brain me-2"></i>PropAI
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/docs">
+                            <i class="fas fa-book me-1"></i>API Dokümantasyon
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/">
+                            <i class="fas fa-cog me-1"></i>Admin Panel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#quick-menu">
+                            <i class="fas fa-bars me-1"></i>Ana Menü
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">
+                <i class="fas fa-magic me-3"></i>PropAI
+            </h1>
+            <p class="hero-subtitle">
+                Yapay Zeka ile Resim Oluşturma Platformu
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="/docs" class="btn btn-custom btn-lg">
+                    <i class="fas fa-rocket me-2"></i>API'yi Keşfet
+                </a>
+                <a href="/admin/" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-cog me-2"></i>Admin Panel
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Menu Section -->
+    <section id="quick-menu" class="py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card shadow-lg">
+                        <div class="card-header bg-primary text-white text-center">
+                            <h4 class="mb-0">
+                                <i class="fas fa-bars me-2"></i>Hızlı Erişim Menüsü
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/admin/" class="btn btn-outline-primary btn-lg">
+                                            <i class="fas fa-shield-alt me-2"></i>Admin Paneli Giriş
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/docs" class="btn btn-outline-success btn-lg">
+                                            <i class="fas fa-book me-2"></i>API Dokümantasyon
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/redoc" class="btn btn-outline-info btn-lg">
+                                            <i class="fas fa-file-alt me-2"></i>ReDoc Dokümantasyon
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/openapi.json" class="btn btn-outline-secondary btn-lg">
+                                            <i class="fas fa-code me-2"></i>OpenAPI JSON
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Panel Alt Menüleri -->
+                            <hr class="my-4">
+                            <h5 class="text-center mb-3">
+                                <i class="fas fa-cogs me-2"></i>Admin Panel Yönetim Menüleri
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/dashboard" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/users" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-users me-1"></i>Kullanıcılar
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/accounts" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-user-circle me-1"></i>Hesaplar
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/models" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-brain me-1"></i>Modeller
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/images" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-images me-1"></i>Resimler
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="/admin/api-docs" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-book me-1"></i>API Docs
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h4>AI Modelleri</h4>
+                        <p class="text-muted">
+                            Gelişmiş yapay zeka modelleri ile yüksek kaliteli resimler oluşturun.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h4>Kullanıcı Yönetimi</h4>
+                        <p class="text-muted">
+                            Güvenli kullanıcı kimlik doğrulama ve hesap yönetimi sistemi.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h4>Analitik</h4>
+                        <p class="text-muted">
+                            Detaylı istatistikler ve performans analizi araçları.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Info Section -->
+    <section class="py-5 bg-white">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="mb-4">RESTful API</h2>
+                    <p class="lead text-muted">
+                        PropAI, modern RESTful API ile güçlü entegrasyon imkanları sunar. 
+                        Swagger dokümantasyonu ile kolayca kullanabilirsiniz.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="/docs" class="btn btn-custom">
+                            <i class="fas fa-book me-2"></i>Swagger UI
+                        </a>
+                        <a href="/redoc" class="btn btn-outline-primary">
+                            <i class="fas fa-file-alt me-2"></i>ReDoc
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-code me-2"></i>API Endpoint Örneği
+                            </h5>
+                            <pre class="bg-light p-3 rounded"><code>POST /api/createimage/
+{
+  "prompt": "A beautiful sunset",
+  "model_id": 1,
+  "user_id": 1
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p class="mb-0">
+                <i class="fas fa-heart text-danger me-1"></i>
+                PropAI - AI Resim Oluşturma Platformu
+            </p>
+            <small class="text-muted">
+                Powered by FastAPI & Modern AI Technologies
+            </small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

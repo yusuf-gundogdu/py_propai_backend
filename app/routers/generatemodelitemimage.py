@@ -8,6 +8,7 @@ from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.schemas.generatemodelitemimage import GenerateModelItemImageCreate, GenerateModelItemImageRead
 from typing import List, Optional
 from fastapi.responses import FileResponse
+from sqlalchemy import update
 
 router = APIRouter(prefix="/generatemodelitemimages", tags=["GenerateModelItemImage"])
 
@@ -77,7 +78,15 @@ async def delete_image(image_id: int, db: AsyncSession = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=404, detail="GenerateModelItemImage not found")
     
-    # Önce dosyayı sil
+    # Önce bu görseli kullanan tüm model item'larda image_id'yi NULL yap
+    await db.execute(
+        update(__import__('app.models.generatemodelitem').models.generatemodelitem.GenerateModelItem)
+        .where(__import__('app.models.generatemodelitem').models.generatemodelitem.GenerateModelItem.image_id == image_id)
+        .values(image_id=None)
+    )
+    await db.commit()
+    
+    # Sonra dosyayı sil
     try:
         if os.path.exists(obj.filePath):
             os.remove(obj.filePath)

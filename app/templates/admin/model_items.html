@@ -1,0 +1,638 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Model Öğeleri - PropAI Admin{% endblock %}
+{% block page_title %}Model Öğeleri{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModelItemModal">
+        <i class="fas fa-plus me-2"></i>Yeni Model Öğesi
+    </button>
+    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#uploadImageModal">
+        <i class="fas fa-upload me-2"></i>Model Resmi Yükle
+    </button>
+    <button class="btn btn-info btn-sm" onclick="loadImages()">
+        <i class="fas fa-sync-alt me-2"></i>Resimleri Yenile
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Model Öğeleri Listesi -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Öğeleri Listesi</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="modelItemsTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+        
+                                <th>Öğe Adı</th>
+        
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modelItemsTableBody">
+                            <!-- JavaScript ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Öğeleri İstatistikleri -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Öğeleri İstatistikleri</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Toplam Öğe</span>
+                        <span class="badge bg-primary" id="totalItems">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Aktif Öğeler</span>
+                        <span class="badge bg-success" id="activeItems">-</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Pasif Öğeler</span>
+                        <span class="badge bg-warning" id="inactiveItems">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Öğeleri Durumu -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Model Öğeleri Durumu</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="modelItemsStatusChart" width="100" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Model Öğesi Modal -->
+<div class="modal fade" id="addModelItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Model Öğesi Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addModelItemForm">
+
+                    <div class="mb-3">
+                        <label for="itemName" class="form-label">Öğe Adı</label>
+                        <input type="text" class="form-control" id="itemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemCredit" class="form-label">Kredi</label>
+                        <input type="number" class="form-control" id="itemCredit" value="10" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemLevel" class="form-label">Seviye</label>
+                        <input type="number" class="form-control" id="itemLevel" value="1" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemPriority" class="form-label">Öncelik</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="itemPriority" min="1" placeholder="Otomatik atanacak">
+                            <button type="button" class="btn btn-outline-secondary" onclick="checkItemPriorities()">
+                                <i class="fas fa-search"></i> Mevcut Öncelikler
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">Boş bırakırsanız otomatik olarak en yüksek öncelik + 1 atanacaktır.</small>
+                        <div id="itemPriorityInfo" class="mt-2" style="display: none;">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <span id="itemPriorityList"></span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemImageId" class="form-label">Model Resmi (Opsiyonel)</label>
+                        <select class="form-control" id="itemImageId">
+                            <option value="">Resim Seçin</option>
+                        </select>
+                        <small class="form-text text-muted">Bu model için kullanılacak resmi seçin. Resim yoksa boş bırakabilirsiniz.</small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="loadImages()">
+                            <i class="fas fa-sync-alt me-1"></i>Resimleri Yenile
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addModelItem()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Öğesi Düzenleme Modal -->
+<div class="modal fade" id="editModelItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Model Öğesi Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editModelItemForm">
+                    <input type="hidden" id="editItemId">
+
+                    <div class="mb-3">
+                        <label for="editItemName" class="form-label">Öğe Adı</label>
+                        <input type="text" class="form-control" id="editItemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemCredit" class="form-label">Kredi</label>
+                        <input type="number" class="form-control" id="editItemCredit" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemLevel" class="form-label">Seviye</label>
+                        <input type="number" class="form-control" id="editItemLevel" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemPriority" class="form-label">Öncelik</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="editItemPriority" required min="1">
+                            <button type="button" class="btn btn-outline-secondary" onclick="checkEditItemPriorities()">
+                                <i class="fas fa-search"></i> Mevcut Öncelikler
+                            </button>
+                        </div>
+                        <div id="editItemPriorityInfo" class="mt-2" style="display: none;">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <span id="editItemPriorityList"></span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemImageId" class="form-label">Model Resmi (Opsiyonel)</label>
+                        <select class="form-control" id="editItemImageId">
+                            <option value="">Resim Seçin</option>
+                        </select>
+                        <small class="form-text text-muted">Bu model için kullanılacak resmi seçin. Resim yoksa boş bırakabilirsiniz.</small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="loadImages()">
+                            <i class="fas fa-sync-alt me-1"></i>Resimleri Yenile
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateModelItem()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resim Yükleme Modal -->
+<div class="modal fade" id="uploadImageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Model Resmi Yükle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadImageForm">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Resim Dosyası</label>
+                        <input type="file" class="form-control" id="imageFile" accept="image/*" required>
+                        <small class="form-text text-muted">JPG, PNG, GIF formatlarında resim yükleyebilirsiniz.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="uploadImage()">Yükle</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    console.log('Model items sayfası yüklendi');
+    loadModelItems();
+    createModelItemsChart();
+    
+    // Resimleri biraz gecikmeyle yükle (modal'ların hazır olması için)
+    setTimeout(() => {
+        console.log('Resimler gecikmeli olarak yükleniyor...');
+        loadImages();
+    }, 500);
+});
+
+function loadModelItems() {
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#modelItemsTableBody');
+            tbody.empty();
+            
+            data.forEach(item => {
+                const imageInfo = item.image ? `<span class="badge bg-success ms-1">Resim: ${item.image.fileName}</span>` : '<span class="badge bg-secondary ms-1">Resim Yok</span>';
+                const imageId = item.image ? item.image.id : null;
+                
+                const row = `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td>${item.name}</td>
+                        <td>
+                            <span class="badge bg-info">Öncelik: ${item.priority}</span>
+                            <span class="badge bg-secondary ms-1">Kredi: ${item.credit}</span>
+                            <span class="badge bg-warning ms-1">Seviye: ${item.level}</span>
+                            ${imageInfo}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editModelItem(${item.id}, '${item.name}', ${item.credit}, ${item.level}, ${item.priority}, ${imageId || 'null'})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteModelItem(${item.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            // İstatistikleri güncelle
+            $('#totalItems').text(data.length);
+            $('#activeItems').text(data.length);
+            $('#inactiveItems').text(0);
+        })
+        .catch(error => {
+            console.error('Model öğeleri yüklenirken hata:', error);
+            $('#modelItemsTableBody').html('<tr><td colspan="4" class="text-center text-danger">Veri yüklenirken hata oluştu</td></tr>');
+        });
+}
+
+function loadImages() {
+    console.log('Resimler yükleniyor...');
+    
+    // Manuel test - select elementlerini kontrol et
+    const imageSelect = $('#itemImageId');
+    const editImageSelect = $('#editItemImageId');
+    console.log('Select elements found:', imageSelect.length, editImageSelect.length);
+    
+    if (imageSelect.length === 0 || editImageSelect.length === 0) {
+        console.error('Select elementleri bulunamadı!');
+        return;
+    }
+    
+    fetch('/api/generatemodelitemimages/')
+        .then(response => {
+            console.log('API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response data:', data);
+            
+            // Select elementlerini temizle
+            imageSelect.empty().append('<option value="">Resim Seçin</option>');
+            editImageSelect.empty().append('<option value="">Resim Seçin</option>');
+            
+            // Resimleri ekle
+            data.forEach(image => {
+                const optionText = `${image.fileName} (${image.fileSize} bytes)`;
+                console.log('Adding option:', optionText);
+                imageSelect.append(`<option value="${image.id}">${optionText}</option>`);
+                editImageSelect.append(`<option value="${image.id}">${optionText}</option>`);
+            });
+            
+            console.log('Model resimleri yüklendi:', data.length, 'resim');
+            console.log('Final select options:', imageSelect.find('option').length, editImageSelect.find('option').length);
+            
+            // Manuel test - dropdown'ları kontrol et
+            setTimeout(() => {
+                console.log('Dropdown kontrolü:');
+                console.log('itemImageId options:', $('#itemImageId option').length);
+                console.log('editItemImageId options:', $('#editItemImageId option').length);
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Resimler yüklenirken hata:', error);
+            // Hata durumunda kullanıcıya bilgi ver
+            imageSelect.empty().append('<option value="">Resimler yüklenemedi</option>');
+            editImageSelect.empty().append('<option value="">Resimler yüklenemedi</option>');
+        });
+}
+
+function createModelItemsChart() {
+    const ctx = document.getElementById('modelItemsStatusChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Aktif', 'Pasif'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#28a745', '#ffc107'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function addModelItem() {
+    const name = $('#itemName').val();
+    const credit = parseInt($('#itemCredit').val());
+    const level = parseInt($('#itemLevel').val());
+    const priority = $('#itemPriority').val() ? parseInt($('#itemPriority').val()) : null;
+    const imageId = $('#itemImageId').val();
+    
+    if (!name) {
+        alert('Lütfen öğe adını girin');
+        return;
+    }
+    
+    // Loading state
+    const addButton = $('#addModelItemModal .btn-primary');
+    const originalText = addButton.text();
+    addButton.prop('disabled', true).text('Ekleniyor...');
+    
+    const data = {
+        name: name,
+        credit: credit,
+        level: level
+    };
+    
+    if (priority) {
+        data.priority = priority;
+    }
+    
+    // Eğer resim seçilmişse ekle
+    if (imageId) {
+        data.image_id = parseInt(imageId);
+    }
+    
+    fetch('/api/generatemodelitems/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Model öğesi eklenirken hata oluştu');
+            });
+        }
+    })
+    .then(data => {
+        $('#addModelItemModal').modal('hide');
+        $('#addModelItemForm')[0].reset();
+        loadModelItems();
+        alert('Model öğesi başarıyla eklendi');
+    })
+    .catch(error => {
+        console.error('Model öğesi eklenirken hata:', error);
+        let errorMessage = error.message;
+        
+        // Öncelik çakışması kontrolü
+        if (errorMessage.includes('Priority') && errorMessage.includes('already taken')) {
+            errorMessage = 'Bu öncelik değeri zaten kullanılıyor. Lütfen farklı bir öncelik değeri seçin.';
+        }
+        
+        // İsim çakışması kontrolü
+        if (errorMessage.includes('name') && errorMessage.includes('already exists')) {
+            errorMessage = 'Bu isim zaten kullanılıyor. Lütfen farklı bir isim seçin.';
+        }
+        
+        alert('Hata: ' + errorMessage);
+    })
+    .finally(() => {
+        // Loading state'i kaldır
+        addButton.prop('disabled', false).text(originalText);
+    });
+}
+
+function editModelItem(id, name, credit, level, priority, imageId) {
+    $('#editItemId').val(id);
+    $('#editItemName').val(name);
+    $('#editItemCredit').val(credit);
+    $('#editItemLevel').val(level);
+    $('#editItemPriority').val(priority);
+    
+    // Mevcut resmi seç
+    if (imageId) {
+        $('#editItemImageId').val(imageId);
+    } else {
+        $('#editItemImageId').val('');
+    }
+    
+    $('#editModelItemModal').modal('show');
+}
+
+function updateModelItem() {
+    const id = $('#editItemId').val();
+    const name = $('#editItemName').val();
+    const credit = parseInt($('#editItemCredit').val());
+    const level = parseInt($('#editItemLevel').val());
+    const priority = parseInt($('#editItemPriority').val());
+    const imageId = $('#editItemImageId').val();
+    
+    if (!name) {
+        alert('Lütfen öğe adını girin');
+        return;
+    }
+    
+    // Loading state
+    const updateButton = $('#editModelItemModal .btn-primary');
+    const originalText = updateButton.text();
+    updateButton.prop('disabled', true).text('Güncelleniyor...');
+    
+    const data = {
+        name: name,
+        credit: credit,
+        level: level,
+        priority: priority
+    };
+    
+    // Eğer resim seçilmişse ekle
+    if (imageId) {
+        data.image_id = parseInt(imageId);
+    }
+    
+    fetch(`/api/generatemodelitems/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Model öğesi güncellenirken hata oluştu');
+            });
+        }
+    })
+    .then(data => {
+        $('#editModelItemModal').modal('hide');
+        loadModelItems();
+        alert('Model öğesi başarıyla güncellendi');
+    })
+    .catch(error => {
+        console.error('Model öğesi güncellenirken hata:', error);
+        let errorMessage = error.message;
+        
+        // Öncelik çakışması kontrolü
+        if (errorMessage.includes('Priority') && errorMessage.includes('already taken')) {
+            errorMessage = 'Bu öncelik değeri zaten kullanılıyor. Lütfen farklı bir öncelik değeri seçin.';
+        }
+        
+        // İsim çakışması kontrolü
+        if (errorMessage.includes('name') && errorMessage.includes('already exists')) {
+            errorMessage = 'Bu isim zaten kullanılıyor. Lütfen farklı bir isim seçin.';
+        }
+        
+        alert('Hata: ' + errorMessage);
+    })
+    .finally(() => {
+        // Loading state'i kaldır
+        updateButton.prop('disabled', false).text(originalText);
+    });
+}
+
+function deleteModelItem(id) {
+    if (confirm('Bu model öğesini silmek istediğinizden emin misiniz?')) {
+        fetch(`/api/generatemodelitems/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadModelItems();
+                alert('Model öğesi başarıyla silindi');
+            } else {
+                alert('Model öğesi silinirken hata oluştu');
+            }
+        })
+        .catch(error => {
+            console.error('Model öğesi silinirken hata:', error);
+            alert('Model öğesi silinirken hata oluştu');
+        });
+    }
+}
+
+function checkItemPriorities() {
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            const priorities = data.map(item => `ID: ${item.id}, Ad: ${item.name}, Öncelik: ${item.priority}`).join('<br>');
+            $('#itemPriorityList').html(priorities || 'Henüz öncelik atanmış öğe yok.');
+            $('#itemPriorityInfo').show();
+        })
+        .catch(error => {
+            console.error('Öncelikler yüklenirken hata:', error);
+            $('#itemPriorityList').html('Öncelik bilgisi yüklenemedi.');
+            $('#itemPriorityInfo').show();
+        });
+}
+
+function checkEditItemPriorities() {
+    const currentId = $('#editItemId').val();
+    fetch('/api/generatemodelitems/')
+        .then(response => response.json())
+        .then(data => {
+            // Mevcut düzenlenen öğeyi hariç tut
+            const otherPriorities = data
+                .filter(item => item.id != currentId)
+                .map(item => `ID: ${item.id}, Ad: ${item.name}, Öncelik: ${item.priority}`)
+                .join('<br>');
+            $('#editItemPriorityList').html(otherPriorities || 'Diğer öncelik atanmış öğe yok.');
+            $('#editItemPriorityInfo').show();
+        })
+        .catch(error => {
+            console.error('Öncelikler yüklenirken hata:', error);
+            $('#editItemPriorityList').html('Öncelik bilgisi yüklenemedi.');
+            $('#editItemPriorityInfo').show();
+        });
+}
+
+function uploadImage() {
+    const fileInput = document.getElementById('imageFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Lütfen bir resim dosyası seçin');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Loading state
+    const uploadButton = $('#uploadImageModal .btn-primary');
+    const originalText = uploadButton.text();
+    uploadButton.prop('disabled', true).text('Yükleniyor...');
+    
+    fetch('/api/generatemodelitemimages/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Resim yüklenirken hata oluştu');
+            });
+        }
+    })
+    .then(data => {
+        $('#uploadImageModal').modal('hide');
+        $('#uploadImageForm')[0].reset();
+        loadImages(); // Resim listesini yenile
+        alert('Model resmi başarıyla yüklendi: ' + data.fileName);
+    })
+    .catch(error => {
+        console.error('Resim yüklenirken hata:', error);
+        alert('Hata: ' + error.message);
+    })
+    .finally(() => {
+        // Loading state'i kaldır
+        uploadButton.prop('disabled', false).text(originalText);
+    });
+}
+</script>
+{% endblock %} 

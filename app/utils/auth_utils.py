@@ -12,10 +12,10 @@ from app.models.user import User
 # --- Ayarlar ---
 SECRET_KEY = "super_secret_key"  # Bunu .env'den alman tavsiye edilir
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 saat
 
 # --- OAuth2 Scheme ---
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 # --- Şifreleme ayarları ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,6 +27,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # --- Şifre hash'leme ---
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+# --- Kullanıcı kimlik doğrulama ---
+async def authenticate_user(db: AsyncSession, username: str, password: str) -> Optional[User]:
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalars().first()
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
 
 # --- Access Token oluşturma ---
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -46,6 +56,10 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if not token:
+        raise credentials_exception
+        
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")

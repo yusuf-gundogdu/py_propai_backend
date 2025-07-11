@@ -1,0 +1,264 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Kullanıcı Yönetimi - PropAI Admin{% endblock %}
+{% block page_title %}Kullanıcı Yönetimi{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+    <i class="fas fa-plus me-2"></i>Yeni Kullanıcı
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Kullanıcı Listesi</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="usersTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Kullanıcı Adı</th>
+                        <th>Durum</th>
+                        <th>Oluşturulma Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- JavaScript ile doldurulacak -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Kullanıcı Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Kullanıcı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Şifre</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                            <label class="form-check-label" for="isActive">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="addUser()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Düzenleme Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kullanıcı Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="editUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">Yeni Şifre (Boş bırakılabilir)</label>
+                        <input type="password" class="form-control" id="editPassword">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editIsActive">
+                            <label class="form-check-label" for="editIsActive">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateUser()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    loadUsers();
+});
+
+function loadUsers() {
+    fetch('/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = $('#usersTableBody');
+            tbody.empty();
+            
+            data.forEach(user => {
+                const row = `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>
+                            <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
+                                ${user.is_active ? 'Aktif' : 'Pasif'}
+                            </span>
+                        </td>
+                        <td>${new Date().toLocaleDateString('tr-TR')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id}, '${user.username}', ${user.is_active})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${user.id !== 1 ? `
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        })
+        .catch(error => {
+            console.error('Kullanıcılar yüklenirken hata:', error);
+            $('#usersTableBody').html('<tr><td colspan="5" class="text-center text-danger">Kullanıcılar yüklenirken hata oluştu</td></tr>');
+        });
+}
+
+function addUser() {
+    const username = $('#username').val();
+    const password = $('#password').val();
+    const isActive = $('#isActive').is(':checked');
+    
+    if (!username || !password) {
+        alert('Kullanıcı adı ve şifre gereklidir!');
+        return;
+    }
+    
+    fetch('/api/users/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#addUserModal').modal('hide');
+            $('#addUserForm')[0].reset();
+            loadUsers();
+            alert('Kullanıcı başarıyla eklendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Kullanıcı eklenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        alert('Hata: ' + error.message);
+    });
+}
+
+function editUser(id, username, isActive) {
+    $('#editUserId').val(id);
+    $('#editUsername').val(username);
+    $('#editIsActive').prop('checked', isActive);
+    $('#editUserModal').modal('show');
+}
+
+function updateUser() {
+    const id = $('#editUserId').val();
+    const username = $('#editUsername').val();
+    const password = $('#editPassword').val();
+    const isActive = $('#editIsActive').is(':checked');
+    
+    if (!username) {
+        alert('Kullanıcı adı gereklidir!');
+        return;
+    }
+    
+    const updateData = {
+        username: username,
+        is_active: isActive
+    };
+    
+    if (password) {
+        updateData.password = password;
+    }
+    
+    fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+    })
+    .then(response => {
+        if (response.ok) {
+            $('#editUserModal').modal('hide');
+            loadUsers();
+            alert('Kullanıcı başarıyla güncellendi!');
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.detail || 'Kullanıcı güncellenirken hata oluştu');
+            });
+        }
+    })
+    .catch(error => {
+        alert('Hata: ' + error.message);
+    });
+}
+
+function deleteUser(id) {
+    if (confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
+        fetch(`/api/users/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadUsers();
+                alert('Kullanıcı başarıyla silindi!');
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.detail || 'Kullanıcı silinirken hata oluştu');
+                });
+            }
+        })
+        .catch(error => {
+            alert('Hata: ' + error.message);
+        });
+    }
+}
+</script>
+{% endblock %} 

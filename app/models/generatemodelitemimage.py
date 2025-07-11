@@ -7,6 +7,4 @@ class GenerateModelItemImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     fileName = Column(String, nullable=False)
     filePath = Column(String, nullable=False)
-    fileSize = Column(Integer)
-    # model_id alanı kaldırıldı
-    # model = relationship("GenerateModelItem", back_populates="images") 
+    fileSize = Column(Integer) 

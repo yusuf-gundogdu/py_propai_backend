@@ -16,6 +16,4 @@ class Account(Base):
     credit = Column(Integer)
     level = Column(Integer)
     timestamp = Column(Integer, nullable=True)
-    create_images = relationship("CreateImage", back_populates="user")
-    created_images = relationship("CreatedImage", back_populates="user")
-    image_histories = relationship("ImageHistory", back_populates="user") 
+ 

@@ -44,6 +44,34 @@ async def read_users(
     return result.scalars().all()
 
 # Kullanıcı silme (Admin hariç)
+@router.put("/{user_id}")
+async def update_user(
+    user_id: int,
+    user_update: UserCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    db_user = await db.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Kullanıcı adı güncelleme
+    if user_update.username != db_user.username:
+        result = await db.execute(select(User).where(User.username == user_update.username))
+        if result.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="username already registered"
+            )
+        db_user.username = user_update.username
+    
+    # Şifre güncelleme (eğer verilmişse)
+    if user_update.password:
+        db_user.hashed_password = get_password_hash(user_update.password)
+    
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: int,
