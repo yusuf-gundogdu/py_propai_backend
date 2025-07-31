@@ -58,26 +58,24 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(LoggingMiddleware)
 
-# Authentication middleware - tüm route'ları koruma altına al
+# Authentication middleware - sadece admin sayfalarını koruma altına al
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         
-        # Açık kalması gereken sayfalar (sadece admin login sayfaları)
+        # Açık kalması gereken sayfalar (admin login sayfaları)
         allowed_paths = [
             "/admin/",
             "/admin/login"
         ]
         
-        # Static dosyalar ve resimler açık kalabilir
+        # Static dosyalar, resimler ve API endpoint'leri açık kalabilir
         allowed_prefixes = [
+            "/api/",          # Tüm API endpoint'leri public
             "/images/",
             "/static/",
             "/favicon.ico"
         ]
-        
-        # API rotaları da korunmalı - sadece admin giriş yaptıktan sonra erişilebilir
-        # "/api/" ile başlayan rotalar da authentication gerektirir
         
         # Eğer açık sayfalardan biri değilse
         is_allowed = path in allowed_paths or any(path.startswith(prefix) for prefix in allowed_prefixes)
