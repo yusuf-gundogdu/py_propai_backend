@@ -1,0 +1,16 @@
+[Unit]
+Description=PropAI FastAPI Application
+After=network.target
+
+[Service]
+Type=exec
+User=ubuntu
+WorkingDirectory=/workspace
+Environment=DB_URL=sqlite+aiosqlite:///./propai.db
+Environment=PATH=/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
