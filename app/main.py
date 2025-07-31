@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -58,6 +58,55 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(LoggingMiddleware)
 
+# Authentication middleware - tüm route'ları koruma altına al
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        
+        # Açık kalması gereken sayfalar (sadece admin login sayfaları)
+        allowed_paths = [
+            "/admin/",
+            "/admin/login"
+        ]
+        
+        # Static dosyalar ve resimler açık kalabilir
+        allowed_prefixes = [
+            "/images/",
+            "/static/",
+            "/favicon.ico"
+        ]
+        
+        # API rotaları da korunmalı - sadece admin giriş yaptıktan sonra erişilebilir
+        # "/api/" ile başlayan rotalar da authentication gerektirir
+        
+        # Eğer açık sayfalardan biri değilse
+        is_allowed = path in allowed_paths or any(path.startswith(prefix) for prefix in allowed_prefixes)
+        
+        if not is_allowed:
+            # Ana sayfa ise admin'e yönlendir
+            if path == "/":
+                return RedirectResponse(url="/admin/", status_code=302)
+            
+            # Diğer tüm sayfalar için authentication kontrolü
+            access_token = request.cookies.get("access_token")
+            if not access_token:
+                return RedirectResponse(url="/admin/", status_code=302)
+            
+            # Token'ı doğrula
+            try:
+                from app.utils.auth_utils import jwt, SECRET_KEY, ALGORITHM
+                payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+                username = payload.get("sub")
+                if not username:
+                    return RedirectResponse(url="/admin/", status_code=302)
+            except Exception:
+                return RedirectResponse(url="/admin/", status_code=302)
+        
+        response = await call_next(request)
+        return response
+
+app.add_middleware(AuthMiddleware)
+
 # Router'ları ekle
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(docs_auth_router)
@@ -76,18 +125,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Ana sayfa"""
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/docs", response_class=HTMLResponse)
-async def custom_docs(request: Request):
-    """Özelleştirilmiş Swagger UI sayfası"""
-    return templates.TemplateResponse("swagger_custom.html", {"request": request})
-
-@app.get("/redoc", response_class=HTMLResponse)
-async def custom_redoc(request: Request):
-    """Özelleştirilmiş ReDoc sayfası"""
-    return templates.TemplateResponse("redoc_custom.html", {"request": request})
+    """Ana sayfa - otomatik olarak admin'e yönlendirir"""
+    return RedirectResponse(url="/admin/", status_code=302)
 
 @app.on_event("startup")
 async def startup():
@@ -95,6 +134,11 @@ async def startup():
     
     # Gerekli klasörleri oluştur
     import os
+    from dotenv import load_dotenv
+    
+    # .env dosyasını yükle
+    load_dotenv()
+    
     folders = ["ai_generated", "user_uploads", "generate_image"]
     for folder in folders:
         try:
@@ -114,13 +158,17 @@ async def startup():
         
         # Sonra tabloları oluştur
         await conn.run_sync(Base.metadata.create_all)
+    
     # Admin kullanıcıyı oluştur
     from sqlalchemy.future import select
     from app.utils.auth_utils import get_password_hash
-    import os
     from app.database import async_session
+    
     USERNAME = os.getenv("BASIC_AUTH_USERNAME")
     PASSWORD = os.getenv("BASIC_AUTH_PASSWORD")
+    
+    print(f"Environment values - USERNAME: {USERNAME}, PASSWORD: {'***' if PASSWORD else None}")
+    
     if USERNAME and PASSWORD:
         async with async_session() as session:
             result = await session.execute(select(User).where(User.username == USERNAME))
@@ -133,6 +181,11 @@ async def startup():
                 )
                 session.add(admin)
                 await session.commit()
+                print(f"✅ Admin kullanıcısı oluşturuldu: {USERNAME}")
+            else:
+                print(f"✅ Admin kullanıcısı zaten mevcut: {USERNAME}")
+    else:
+        print("❌ Environment variables not found for admin user creation")
 
 @app.get("/images/user_uploads/{filename}")
 async def serve_user_image(filename: str):

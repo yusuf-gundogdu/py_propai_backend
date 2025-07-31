@@ -14,6 +14,10 @@ SECRET_KEY = "super_secret_key"  # Bunu .env'den alman tavsiye edilir
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 saat
 
+# Export edilen değişkenler
+__all__ = ["jwt", "SECRET_KEY", "ALGORITHM", "verify_password", "get_password_hash", 
+           "authenticate_user", "create_access_token", "get_current_user", "get_current_admin"]
+
 # --- OAuth2 Scheme ---
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
