@@ -8,13 +8,12 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DB_URL")
 
-# SQLite için uygun ayarlar
-if DATABASE_URL and DATABASE_URL.startswith("sqlite"):
-    # SQLite için pool ayarları kullanmıyoruz
+# Production için pool ayarları - SQLite için düzeltildi
+if DATABASE_URL and "sqlite" in DATABASE_URL:
+    # SQLite için basit ayarlar
     engine = create_async_engine(
         DATABASE_URL,
-        echo=bool(os.getenv("DEBUG", False)),
-        poolclass=NullPool
+        echo=bool(os.getenv("DEBUG", False))
     )
 else:
     # PostgreSQL/MySQL için pool ayarları
