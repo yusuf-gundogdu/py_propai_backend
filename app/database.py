@@ -8,15 +8,24 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DB_URL")
 
-# Production için pool ayarları
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=bool(os.getenv("DEBUG", False)),  # DEBUG moduna göre echo
-    poolclass=NullPool if os.getenv("TESTING") else None,  # Testler için pool kapatma
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True  # Bağlantıların sağlığını kontrol et
-)
+# SQLite için uygun ayarlar
+if DATABASE_URL and DATABASE_URL.startswith("sqlite"):
+    # SQLite için pool ayarları kullanmıyoruz
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=bool(os.getenv("DEBUG", False)),
+        poolclass=NullPool
+    )
+else:
+    # PostgreSQL/MySQL için pool ayarları
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=bool(os.getenv("DEBUG", False)),
+        poolclass=NullPool if os.getenv("TESTING") else None,
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True
+    )
 
 async_session = sessionmaker(
     bind=engine,
