@@ -32,8 +32,8 @@ import os
 app = FastAPI(
     title="PropAI",
     version="v0.0.1",
-    docs_url=None,  # Varsayılan docs route'unu devre dışı bırak
-    redoc_url=None  # Varsayılan redoc route'unu da devre dışı bırak
+    docs_url="/docs",  # Swagger dokümanı aktif
+    redoc_url="/redoc"  # Redoc dokümanı aktif
 )
 
 templates = Jinja2Templates(directory="app/templates")

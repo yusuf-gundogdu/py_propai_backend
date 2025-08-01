@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, UploadFile, File, Form
+from fastapi import Query, APIRouter, Depends, HTTPException, BackgroundTasks, status, UploadFile, File, Form
+from typing import List, Optional
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
@@ -8,13 +10,12 @@ from app.models.account import Account
 from app.models.generatemodelitem import GenerateModelItem
 from app.schemas.createimagehistory import CreateImageHistoryUpdate
 from app.schemas.generate_request import GenerateRequestCreate, GenerateRequestResponse, GenerateStartResponse, GenerateStatusResponse
-from typing import Optional
-from datetime import datetime
 import asyncio
 import random
 import os
 import shutil
 from uuid import uuid4
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/generate", tags=["Generate"])
 
@@ -418,6 +419,23 @@ async def upload_image(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         file_size = os.path.getsize(file_path)
+        # Kredi düşümü: sadece resim başarıyla kaydedilirse
+        # Account'u bul
+        account_query = select(Account).where(Account.udid == history.udid)
+        account_result = await db.execute(account_query)
+        account = account_result.scalar_one_or_none()
+        if account:
+            # Model kredi miktarını bul
+            model_query = select(GenerateModelItem).where(GenerateModelItem.id == history.model_id)
+            model_result = await db.execute(model_query)
+            model = model_result.scalar_one_or_none()
+            if model and account.credit >= model.credit:
+                account.credit -= model.credit
+                await db.commit()
+                await db.refresh(account)
+                print(f"✅ Kullanıcı {account.udid} için {model.credit} kredi düşüldü. Yeni kredi: {account.credit}")
+            else:
+                print(f"❌ Kredi düşümü başarısız: model veya kredi yetersiz.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Resim kaydedilirken hata oluştu: {str(e)}")
 
@@ -440,3 +458,47 @@ async def upload_image(
         message="Generate işlemi başlatıldı",
         status="processing"
     )
+
+# --- GALLERY SERVISI ---
+from pydantic import BaseModel
+
+class UserGalleryItem(BaseModel):
+    history_id: int
+    generated_image_path: str
+    generated_file_name: str
+    generated_file_size: int
+    created_at: datetime
+    completed_at: datetime | None
+    credit: int
+    model_name: str
+    status: str
+
+@router.get("/gallery/{udid}", response_model=List[UserGalleryItem], tags=["Generate"])
+async def get_user_gallery(
+    udid: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Kullanıcının generate ettiği resimlerin ve detaylarının listesi
+    """
+    query = select(CreateImageHistory, GenerateModelItem).join(
+        GenerateModelItem, CreateImageHistory.model_id == GenerateModelItem.id
+    ).where(
+        CreateImageHistory.udid == udid,
+        CreateImageHistory.status == 'success'
+    )
+    result = await db.execute(query)
+    items = []
+    for history, model in result.fetchall():
+        items.append(UserGalleryItem(
+            history_id=history.id,
+            generated_image_path=history.generated_image_path,
+            generated_file_name=history.generated_file_name,
+            generated_file_size=history.generated_file_size or 0,
+            created_at=history.created_at,
+            completed_at=history.completed_at,
+            credit=history.credit,
+            model_name=model.name,
+            status=history.status
+        ))
+    return items
