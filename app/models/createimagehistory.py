@@ -10,6 +10,8 @@ class CreateImageHistory(Base):
     udid = Column(String(255), nullable=False)
     model_id = Column(Integer, ForeignKey("generatemodelitem.id"), nullable=False)
     
+    # Generate ID
+    generate_id = Column(String(100), unique=True, nullable=False)
     # Resim Yolları
     original_image_path = Column(String(500), nullable=False)  # Kullanıcının yüklediği resim
     generated_image_path = Column(String(500))  # AI'ın oluşturduğu resim (başarılı olursa)

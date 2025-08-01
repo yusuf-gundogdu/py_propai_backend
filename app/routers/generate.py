@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
@@ -7,6 +7,7 @@ from app.models.createimagehistory import CreateImageHistory
 from app.models.account import Account
 from app.models.generatemodelitem import GenerateModelItem
 from app.schemas.createimagehistory import CreateImageHistoryUpdate
+from app.schemas.generate_request import GenerateRequestCreate, GenerateRequestResponse, GenerateStartResponse, GenerateStatusResponse
 from typing import Optional
 from datetime import datetime
 import asyncio
@@ -16,6 +17,131 @@ import shutil
 from uuid import uuid4
 
 router = APIRouter(prefix="/generate", tags=["Generate"])
+
+@router.post("/request", response_model=GenerateRequestResponse)
+async def request_generate(
+    request: GenerateRequestCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    1. Aşama: Generate isteği kontrolü
+    - Kullanıcının kredisini kontrol et
+    - Kullanıcının level'ını model level'ı ile karşılaştır
+    - Şartlar sağlanırsa unique generate_id döner
+    """
+    
+    # Kullanıcının hesabını bul
+    account_query = select(Account).where(Account.udid == request.udid)
+    account_result = await db.execute(account_query)
+    account = account_result.scalar_one_or_none()
+    
+    if not account:
+        raise HTTPException(
+            status_code=404, 
+            detail="Kullanıcı hesabı bulunamadı. Lütfen önce hesap oluşturun."
+        )
+    
+    # Generate modelini bul
+    model_query = select(GenerateModelItem).where(GenerateModelItem.id == request.model_id)
+    model_result = await db.execute(model_query)
+    model = model_result.scalar_one_or_none()
+    
+    if not model:
+        raise HTTPException(
+            status_code=404,
+            detail="Generate modeli bulunamadı."
+        )
+    
+    # Kredi kontrolü
+    if account.credit < model.credit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Yetersiz kredi. Bu model için {model.credit} kredi gerekli, hesabınızda {account.credit} kredi var."
+        )
+    
+    # Level kontrolü
+    if account.level < model.level:
+        # Kullanıcının level'ı model level'ından düşük
+        if account.level == 0:
+            # Ücretsiz kullanıcı, ücretli model
+            raise HTTPException(
+                status_code=403,
+                detail=f"Bu model ücretli kullanıcılar içindir (Level {model.level} gerekli). Şu anda ücretsiz kullanıcısınız (Level {account.level}). Premium'a geçmek için uygulamayı güncelleyin."
+            )
+        else:
+            # Ücretli kullanıcı ama level yetersiz
+            raise HTTPException(
+                status_code=403,
+                detail=f"Bu model için Level {model.level} gerekli. Şu anda Level {account.level} kullanıcısısınız. Yüksek level'a geçmek için uygulamayı güncelleyin."
+            )
+    
+    # Şartlar sağlandı, unique generate_id oluştur
+    generate_id = str(uuid4())
+    
+    return GenerateRequestResponse(
+        generate_id=generate_id,
+        message=f"Generate isteği onaylandı. Model: {model.name}, Kredi: {model.credit}",
+        status="approved"
+    )
+
+
+@router.post("/start", response_model=GenerateRequestResponse)
+async def start_generate(
+    request: GenerateRequestCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Kullanıcı sadece model_id ve udid gönderir. Tüm kontroller backend'de yapılır.
+    Şartlar sağlanırsa unique generate_id döner, aksi durumda hata/exceptions döner.
+    """
+    # Kullanıcı hesabı kontrolü
+    account_query = select(Account).where(Account.udid == request.udid)
+    account_result = await db.execute(account_query)
+    account = account_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Kullanıcı hesabı bulunamadı.")
+
+    # Model kontrolü
+    model_query = select(GenerateModelItem).where(GenerateModelItem.id == request.model_id)
+    model_result = await db.execute(model_query)
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model bulunamadı.")
+
+    # Kredi kontrolü
+    if account.credit < model.credit:
+        raise HTTPException(status_code=400, detail=f"Yetersiz kredi. Model için {model.credit} kredi gerekli, hesabınızda {account.credit} kredi var.")
+
+    # Level kontrolü
+    if account.level < model.level:
+        if account.level == 0:
+            raise HTTPException(status_code=403, detail=f"Bu model ücretli kullanıcılar içindir (Level {model.level} gerekli). Şu anda ücretsiz kullanıcısınız.")
+        else:
+            raise HTTPException(status_code=403, detail=f"Bu model için Level {model.level} gerekli. Şu anda Level {account.level} kullanıcısısınız.")
+
+    # Şartlar sağlandı, generate_id oluştur
+    generate_id = str(uuid4())
+
+    # History kaydı oluştur
+    history = CreateImageHistory(
+        udid=request.udid,
+        model_id=request.model_id,
+        generate_id=generate_id,
+        original_image_path="",
+        credit=model.credit,
+        level=account.level,
+        status='pending'
+    )
+    db.add(history)
+    await db.commit()
+    await db.refresh(history)
+
+    return GenerateRequestResponse(
+        generate_id=generate_id,
+        message=f"Generate isteği onaylandı. Model: {model.name}, Kredi: {model.credit}",
+        status="approved"
+    )
+
 
 async def simulate_image_generation(history_id: int):
     """Simüle edilmiş resim generate işlemi"""
@@ -150,140 +276,167 @@ async def simulate_image_generation(history_id: int):
         await conn.commit()
         print(f"İşlem {history_id} tamamlandı: {update_data['status']}")
 
-async def simulate_image_generation_simple(history_id: int, db: AsyncSession):
+async def simulate_image_generation_simple(history_id: int, original_db: AsyncSession):
     """Basit simüle edilmiş resim generate işlemi"""
     
     # 5 saniye bekle
     await asyncio.sleep(5)
     
-    # History kaydını al
-    query = select(CreateImageHistory).where(CreateImageHistory.id == history_id)
-    result = await db.execute(query)
-    history = result.scalar_one_or_none()
-    
-    if not history:
-        print(f"History {history_id} bulunamadı")
-        return
-    
-    # Başarılı senaryo
-    generated_filename = f"ai_{uuid4()}.jpg"
-    generated_path = f"/api/aigenerated/{generated_filename}"
-    
-    # AI generated klasörü
-    ai_generated_dir = "ai_generated"
-    test_image_path = os.path.join(ai_generated_dir, generated_filename)
-    file_size = 0
-    
-    try:
-        # User uploads klasöründen rastgele bir resim kopyala
-        user_uploads_dir = "user_uploads"
-        if os.path.exists(user_uploads_dir):
-            user_images = [f for f in os.listdir(user_uploads_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
-            if user_images:
-                random_image = random.choice(user_images)
-                source_path = os.path.join(user_uploads_dir, random_image)
-                shutil.copy2(source_path, test_image_path)
-                file_size = os.path.getsize(test_image_path)
-                print(f"✅ AI resmi oluşturuldu: {test_image_path} (Kaynak: {random_image}, Boyut: {file_size} bytes)")
-            else:
-                # Placeholder oluştur
-                with open(test_image_path, "wb") as f:
-                    test_image_data = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x11\x08\x00d\x00d\x01\x01\x11\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xaa\xff\xd9'
-                    f.write(test_image_data)
-                    file_size = len(test_image_data)
-                print(f"✅ AI resmi oluşturuldu: {test_image_path} (Placeholder, Boyut: {file_size} bytes)")
-    except Exception as e:
-        print(f"❌ AI resmi oluşturulurken hata: {e}")
-        # Hata durumunda başarısız olarak işaretle
+    # Yeni database session oluştur (async task için)
+    from app.database import async_session
+    async with async_session() as db:
+        # History kaydını al
+        query = select(CreateImageHistory).where(CreateImageHistory.id == history_id)
+        result = await db.execute(query)
+        history = result.scalar_one_or_none()
+        
+        if not history:
+            print(f"History {history_id} bulunamadı")
+            return
+        
+        # Başarılı senaryo
+        generated_filename = f"ai_{uuid4()}.jpg"
+        generated_path = f"/api/aigenerated/{generated_filename}"
+        
+        # AI generated klasörü
+        ai_generated_dir = "ai_generated"
+        test_image_path = os.path.join(ai_generated_dir, generated_filename)
+        file_size = 0
+        
+        try:
+            # User uploads klasöründen rastgele bir resim kopyala
+            user_uploads_dir = "user_uploads"
+            if os.path.exists(user_uploads_dir):
+                user_images = [f for f in os.listdir(user_uploads_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
+                if user_images:
+                    random_image = random.choice(user_images)
+                    source_path = os.path.join(user_uploads_dir, random_image)
+                    shutil.copy2(source_path, test_image_path)
+                    file_size = os.path.getsize(test_image_path)
+                    print(f"✅ AI resmi oluşturuldu: {test_image_path} (Kaynak: {random_image}, Boyut: {file_size} bytes)")
+                else:
+                    # Placeholder oluştur
+                    with open(test_image_path, "wb") as f:
+                        test_image_data = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x11\x08\x00d\x00d\x01\x01\x11\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xaa\xff\xd9'
+                        f.write(test_image_data)
+                        file_size = len(test_image_data)
+                    print(f"✅ AI resmi oluşturuldu: {test_image_path} (Placeholder, Boyut: {file_size} bytes)")
+        except Exception as e:
+            print(f"❌ AI resmi oluşturulurken hata: {e}")
+            # Hata durumunda başarısız olarak işaretle
+            update_data = {
+                'status': 'failed',
+                'generated_image_path': None,
+                'generated_file_name': None,
+                'generated_file_size': None,
+                'completed_at': datetime.utcnow(),
+                'processing_time_seconds': 5,
+                'error_message': f'AI resmi oluşturulurken hata: {e}'
+            }
+            
+            # History'yi güncelle
+            for key, value in update_data.items():
+                setattr(history, key, value)
+            await db.commit()
+            print(f"İşlem {history_id} tamamlandı: {update_data['status']}")
+            return
+        
+        # Başarılı güncelleme
         update_data = {
-            'status': 'failed',
-            'generated_image_path': None,
-            'generated_file_name': None,
-            'generated_file_size': None,
+            'status': 'success',
+            'generated_image_path': generated_path,
+            'generated_file_name': generated_filename,
+            'generated_file_size': file_size,
             'completed_at': datetime.utcnow(),
             'processing_time_seconds': 5,
-            'error_message': f'AI resmi oluşturulurken hata: {e}'
+            'error_message': None
         }
         
         # History'yi güncelle
         for key, value in update_data.items():
             setattr(history, key, value)
+        
         await db.commit()
-        print(f"İşlem {history_id} tamamlandı: {update_data['status']}")
-        return
-    
-    # Başarılı güncelleme
-    update_data = {
-        'status': 'success',
-        'generated_image_path': generated_path,
-        'generated_file_name': generated_filename,
-        'generated_file_size': file_size,
-        'completed_at': datetime.utcnow(),
-        'processing_time_seconds': 5,
-        'error_message': None
-    }
-    
-    # History'yi güncelle
-    for key, value in update_data.items():
-        setattr(history, key, value)
-    
-    await db.commit()
-    print(f"✅ İşlem {history_id} başarılı oldu: {update_data['status']}")
+        print(f"✅ İşlem {history_id} başarılı oldu: {update_data['status']}")
 
-@router.post("/start/{history_id}")
-async def start_generation(
-    history_id: int,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
-):
-    """Generate işlemini başlat"""
-    
-    # History kaydını kontrol et
-    query = select(CreateImageHistory).where(CreateImageHistory.id == history_id)
-    result = await db.execute(query)
-    history = result.scalar_one_or_none()
-    
-    if not history:
-        raise HTTPException(status_code=404, detail="History not found")
-    
-    if history.status != 'pending':
-        raise HTTPException(status_code=400, detail="İşlem zaten başlatılmış")
-    
-    # Durumu processing'e çevir ve başlama zamanını kaydet
-    history.status = 'processing'
-    history.started_at = datetime.utcnow()
-    await db.commit()
-    
-    # Direkt işlemi başlat (background task yerine)
-    await simulate_image_generation_simple(history_id, db)
-    
-    return {"message": "Generate işlemi başlatıldı", "history_id": history_id}
-
-@router.get("/status/{history_id}")
+@router.get("/status/{history_id}", response_model=GenerateStatusResponse)
 async def get_generation_status(
     history_id: int,
     db: AsyncSession = Depends(get_db)
 ):
     """Generate işleminin durumunu kontrol et"""
-    
     query = select(CreateImageHistory).options(
         joinedload(CreateImageHistory.model)
     ).where(CreateImageHistory.id == history_id)
-    
     result = await db.execute(query)
     history = result.scalar_one_or_none()
-    
     if not history:
         raise HTTPException(status_code=404, detail="History not found")
-    
-    return {
-        "id": history.id,
-        "status": history.status,
-        "created_at": history.created_at,
-        "started_at": history.started_at,
-        "completed_at": history.completed_at,
-        "processing_time_seconds": history.processing_time_seconds,
-        "error_message": history.error_message,
-        "credit": history.credit,
-        "model": history.model.name if history.model else None
-    } 
+    status_messages = {
+        'pending': 'İşlem beklemede',
+        'processing': 'Resim generate ediliyor...',
+        'success': 'Resim başarıyla oluşturuldu',
+        'failed': 'İşlem başarısız oldu',
+        'cancelled': 'İşlem iptal edildi'
+    }
+    return GenerateStatusResponse(
+        history_id=history.id,
+        status=history.status,
+        message=status_messages.get(history.status, 'Bilinmeyen durum'),
+        generated_image_path=history.generated_image_path,
+        processing_time_seconds=history.processing_time_seconds,
+        error_message=history.error_message
+    )
+
+
+@router.post("/upload/{generate_id}", response_model=GenerateStartResponse)
+async def upload_image(
+    generate_id: str,
+    image: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Kullanıcı sadece generate_id ve image gönderir. Diğer tüm bilgiler backend'de bulunur.
+    """
+    # History kaydını bul
+    from sqlalchemy.future import select
+    history_query = select(CreateImageHistory).where(CreateImageHistory.generate_id == generate_id)
+    result = await db.execute(history_query)
+    history = result.scalar_one_or_none()
+    if not history:
+        raise HTTPException(status_code=404, detail="Geçersiz generate_id.")
+
+    # Resim dosyası kontrolü
+    if not image.content_type or not image.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Sadece resim dosyaları kabul edilir.")
+
+    # Resmi kaydet
+    try:
+        file_extension = os.path.splitext(image.filename)[1] if image.filename else ".jpg"
+        unique_filename = f"user_{generate_id}{file_extension}"
+        file_path = os.path.join("user_uploads", unique_filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+        file_size = os.path.getsize(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resim kaydedilirken hata oluştu: {str(e)}")
+
+    # History kaydını güncelle
+    history.original_image_path = f"/api/userupload/{unique_filename}"
+    history.original_file_size = file_size
+    history.original_file_name = image.filename
+    history.status = 'processing'
+    history.started_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(history)
+
+    # Generate işlemini başlat (background'da)
+    from app.routers.generate import simulate_image_generation_simple
+    import asyncio
+    asyncio.create_task(simulate_image_generation_simple(history.id, db))
+
+    return GenerateStartResponse(
+        history_id=history.id,
+        message="Generate işlemi başlatıldı",
+        status="processing"
+    )
