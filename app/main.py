@@ -29,6 +29,12 @@ from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.models.createimagehistory import CreateImageHistory
 from datetime import datetime
 import os
+import logging
+
+# Performance için logging level'ını ayarla
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
 
 
 app = FastAPI(
@@ -39,26 +45,6 @@ app = FastAPI(
 )
 
 templates = Jinja2Templates(directory="app/templates")
-# İstek loglama middleware
-class LoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        print(f"\n--- {request.method} {request.url} ---")
-        print("Headers:")
-        for k, v in request.headers.items():
-            print(f"  {k}: {v}")
-        body = await request.body()
-        if body:
-            try:
-                print(f"Body:\n{body.decode()}")
-            except Exception:
-                print("Body: <binary content>")
-        else:
-            print("Body: <empty>")
-        response = await call_next(request)
-        print("--- Request ended ---\n")
-        return response
-
-app.add_middleware(LoggingMiddleware)
 
 # Authentication middleware - sadece admin sayfalarını koruma altına al
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -146,7 +132,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await handle_websocket_message(client_id, message_data)
             
     except WebSocketDisconnect:
-        print(f"🔌 WebSocket bağlantısı kesildi: {client_id}")
+        pass
     except Exception as e:
         print(f"❌ WebSocket hatası: {e}")
     finally:
@@ -230,6 +216,11 @@ async def startup():
                 print(f"✅ Admin kullanıcısı zaten mevcut: {USERNAME}")
     else:
         print("❌ Environment variables not found for admin user creation")
+    
+    # WebSocket manager'ı başlat
+    print("🚀 WebSocket Manager başlatıldı!")
+    print(f"📡 WebSocket endpoint: ws://localhost:8000/ws/generate")
+    print(f"🔑 Auth: username=generate_machine, password=SecurePassword123!")
 
 @app.get("/images/user_uploads/{filename}")
 async def serve_user_image(filename: str):

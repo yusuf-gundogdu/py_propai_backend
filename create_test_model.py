@@ -6,7 +6,7 @@ async def create_test_model():
     async for db in get_db():
         # Test model oluştur
         test_model = GenerateModelItem(
-            name="Test Model",
+            name="pixarStyleModel_v10.safetensors",
             credit=10,  # 10 kredi
             level=0,    # Seviye 0 (ücretsiz)
             priority=1  # Öncelik 1

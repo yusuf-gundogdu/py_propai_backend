@@ -458,16 +458,31 @@ async def upload_image(
     if authenticated_clients:
         # İlk authenticate edilmiş client'a gönder
         client_id = authenticated_clients[0]
+        
+        # Model bilgisini al
+        model_query = select(GenerateModelItem).where(GenerateModelItem.id == history.model_id)
+        model_result = await db.execute(model_query)
+        model = model_result.scalar_one_or_none()
+        
+        # Resmin tam URL'ini oluştur (generate makinası bu URL'den resmi indirebilir)
+        original_image_url = f"https://propai.store{history.original_image_path}"
+        
+        # Yeni JSON formatına göre generate request oluştur
         generate_request = {
             "history_id": history.id,
             "generate_id": generate_id,
-            "original_image_path": history.original_image_path,
+            "original_image_path": original_image_url,  # Tam URL olarak gönder
             "model_id": history.model_id,
-            "udid": history.udid,
-            "credit": history.credit
+            "udid": history.udid
         }
-        await ws_manager.send_generate_request(client_id, generate_request)
+        # WebSocket'e data objesi içinde gönder
+        message = {
+            "type": "generate_request",
+            "data": generate_request
+        }
+        await ws_manager.send_message(client_id, message)
         print(f"📤 Generate isteği WebSocket'e gönderildi: {client_id}")
+        print(f"🖼️  Resim URL'i: {original_image_url}")
     else:
         # WebSocket bağlantısı yoksa simülasyon çalıştır
         print("⚠️  WebSocket bağlantısı yok, simülasyon başlatılıyor")

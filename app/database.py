@@ -11,7 +11,7 @@ DATABASE_URL = os.getenv("DB_URL")
 # Production için pool ayarları
 engine = create_async_engine(
     DATABASE_URL,
-    echo=bool(os.getenv("DEBUG", False)),  # DEBUG moduna göre echo
+    echo=False,  # SQLAlchemy loglarını tamamen kapat - performans için
     poolclass=NullPool if os.getenv("TESTING") else None,  # Testler için pool kapatma
     pool_size=20,
     max_overflow=10,

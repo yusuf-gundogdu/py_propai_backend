@@ -1,0 +1,69 @@
+nohup: ignoring input
+/usr/local/lib/python3.10/dist-packages/pydantic/_internal/_config.py:322: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+/usr/local/lib/python3.10/dist-packages/pydantic/_internal/_fields.py:151: UserWarning: Field "model_id" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/lib/python3.10/dist-packages/pydantic/_internal/_fields.py:151: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [232551]
+INFO:     Waiting for application startup.
+SQLAlchemy'nin gördüğü tablolar: dict_keys(['users', 'account', 'generatemodellist', 'generatemodelitem', 'create_image_history', 'generatemodelitemimage'])
+✅ Klasör oluşturuldu/kontrol edildi: ai_generated
+✅ Klasör oluşturuldu/kontrol edildi: user_uploads
+✅ Klasör oluşturuldu/kontrol edildi: generate_image
+2025-08-05 16:41:54,871 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2025-08-05 16:41:54,872 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-05 16:41:54,880 INFO sqlalchemy.engine.Engine select current_schema()
+2025-08-05 16:41:54,880 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-05 16:41:54,883 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2025-08-05 16:41:54,883 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-05 16:41:54,886 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-08-05 16:41:54,887 INFO sqlalchemy.engine.Engine ALTER TABLE create_image_history DROP COLUMN IF EXISTS account_id
+2025-08-05 16:41:54,887 INFO sqlalchemy.engine.Engine [generated in 0.00020s] ()
+Removed obsolete account_id column from create_image_history
+2025-08-05 16:41:54,896 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,896 INFO sqlalchemy.engine.Engine [generated in 0.00048s] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,901 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,901 INFO sqlalchemy.engine.Engine [cached since 0.005289s ago] ('account', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,902 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,902 INFO sqlalchemy.engine.Engine [cached since 0.006829s ago] ('generatemodellist', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,903 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,904 INFO sqlalchemy.engine.Engine [cached since 0.007938s ago] ('generatemodelitem', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,905 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,905 INFO sqlalchemy.engine.Engine [cached since 0.008998s ago] ('create_image_history', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,906 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-05 16:41:54,906 INFO sqlalchemy.engine.Engine [cached since 0.01062s ago] ('generatemodelitemimage', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-05 16:41:54,910 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2025-08-05 16:41:54,911 INFO sqlalchemy.engine.Engine [generated in 0.00089s] ('platformenum', 'pg_catalog')
+2025-08-05 16:41:54,913 INFO sqlalchemy.engine.Engine COMMIT
+Environment values - USERNAME: admin, PASSWORD: ***
+2025-08-05 16:41:54,919 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-08-05 16:41:54,932 INFO sqlalchemy.engine.Engine SELECT users.id, users.username, users.hashed_password, users.is_active 
+FROM users 
+WHERE users.username = $1::VARCHAR
+2025-08-05 16:41:54,932 INFO sqlalchemy.engine.Engine [generated in 0.00041s] ('admin',)
+✅ Admin kullanıcısı zaten mevcut: admin
+2025-08-05 16:41:54,934 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     Application startup complete.
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 443): address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
