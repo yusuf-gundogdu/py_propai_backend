@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, HTTPException
+from fastapi import FastAPI, Depends, Request, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -20,12 +20,14 @@ from app.routers.createimagehistory import router as createimagehistory_router
 from app.routers.generate import router as generate_router
 from app.routers.userupload import router as userupload_router
 from app.routers.aigenerated import router as aigenerated_router
+from app.websocket_server import ws_manager, handle_websocket_message
 from app.models.account import Account
 from app.models.user import User
 from app.models.generatemodellist import GenerateModelList
 from app.models.generatemodelitem import GenerateModelItem
 from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.models.createimagehistory import CreateImageHistory
+from datetime import datetime
 import os
 
 
@@ -72,6 +74,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Static dosyalar, resimler ve API endpoint'leri açık kalabilir
         allowed_prefixes = [
             "/api/",          # Tüm API endpoint'leri public
+            "/ws/",           # WebSocket endpoint'leri public
             "/images/",
             "/static/",
             "/favicon.ico"
@@ -118,6 +121,49 @@ app.include_router(createimagehistory_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(userupload_router, prefix="/api")
 app.include_router(aigenerated_router, prefix="/api")
+
+# WebSocket endpoint
+@app.websocket("/ws/generate")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    Generate makinası için WebSocket endpoint
+    Kullanıcı adı ve şifre ile authentication gerekli
+    """
+    import uuid
+    import json
+    
+    client_id = str(uuid.uuid4())
+    
+    try:
+        await ws_manager.connect(websocket, client_id)
+        
+        while True:
+            # Mesaj al
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            
+            # Mesajı işle
+            await handle_websocket_message(client_id, message_data)
+            
+    except WebSocketDisconnect:
+        print(f"🔌 WebSocket bağlantısı kesildi: {client_id}")
+    except Exception as e:
+        print(f"❌ WebSocket hatası: {e}")
+    finally:
+        ws_manager.disconnect(client_id)
+
+# WebSocket status endpoint
+@app.get("/api/ws/status")
+async def get_websocket_status():
+    """WebSocket bağlantı durumunu kontrol et"""
+    authenticated_clients = ws_manager.get_authenticated_clients()
+    
+    return {
+        "active_connections": len(ws_manager.active_connections),
+        "authenticated_clients": len(authenticated_clients),
+        "client_ids": authenticated_clients,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 

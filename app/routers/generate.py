@@ -450,8 +450,28 @@ async def upload_image(
 
     # Generate işlemini başlat (background'da)
     from app.routers.generate import simulate_image_generation_simple
+    from app.websocket_server import ws_manager
     import asyncio
-    asyncio.create_task(simulate_image_generation_simple(history.id, db))
+    
+    # WebSocket'e bağlı generate makinası varsa ona gönder
+    authenticated_clients = ws_manager.get_authenticated_clients()
+    if authenticated_clients:
+        # İlk authenticate edilmiş client'a gönder
+        client_id = authenticated_clients[0]
+        generate_request = {
+            "history_id": history.id,
+            "generate_id": generate_id,
+            "original_image_path": history.original_image_path,
+            "model_id": history.model_id,
+            "udid": history.udid,
+            "credit": history.credit
+        }
+        await ws_manager.send_generate_request(client_id, generate_request)
+        print(f"📤 Generate isteği WebSocket'e gönderildi: {client_id}")
+    else:
+        # WebSocket bağlantısı yoksa simülasyon çalıştır
+        print("⚠️  WebSocket bağlantısı yok, simülasyon başlatılıyor")
+        asyncio.create_task(simulate_image_generation_simple(history.id, db))
 
     return GenerateStartResponse(
         history_id=history.id,
