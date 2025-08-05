@@ -115,7 +115,7 @@ async def update_item(item_id: int, data: GenerateModelItemUpdate, db: AsyncSess
     update_data = data.model_dump(exclude_unset=True)
     if update_data.get('image_id') == 0:
         update_data['image_id'] = None
-    
+
     # Name kontrolü - aynı isimde başka item var mı kontrol et (kendisi hariç)
     if 'name' in update_data:
         existing_item = await db.execute(
@@ -126,10 +126,10 @@ async def update_item(item_id: int, data: GenerateModelItemUpdate, db: AsyncSess
         )
         if existing_item.scalar_one_or_none():
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Item with name '{update_data['name']}' already exists. Please choose another name."
             )
-    
+
     # Priority kontrolü
     if 'priority' in update_data:
         # Verilen priority'de başka item var mı kontrol et (kendisi hariç)
@@ -141,17 +141,17 @@ async def update_item(item_id: int, data: GenerateModelItemUpdate, db: AsyncSess
         )
         if existing_item.scalar_one_or_none():
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Priority {update_data['priority']} is already taken. Please choose another priority value."
             )
-    
-    # Alanları güncelle
+
+    # Tüm alanları güncelle
     for key, value in update_data.items():
         setattr(obj, key, value)
-    
+
     await db.commit()
     await db.refresh(obj)
-    
+
     # image ilişkisini yüklemek için tekrar sorgu yap
     query = select(GenerateModelItem).options(joinedload(GenerateModelItem.image)).where(GenerateModelItem.id == obj.id)
     result = await db.execute(query)

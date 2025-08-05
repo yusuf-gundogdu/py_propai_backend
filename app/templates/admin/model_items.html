@@ -111,6 +111,42 @@
                         <input type="number" class="form-control" id="itemLevel" value="1" required min="0">
                     </div>
                     <div class="mb-3">
+                        <label for="itemSamplerName" class="form-label">Sampler Name</label>
+                        <input type="text" class="form-control" id="itemSamplerName" placeholder="dpmpp_2m">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemCfg" class="form-label">CFG</label>
+                        <input type="number" class="form-control" id="itemCfg" placeholder="6">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemSteps" class="form-label">Steps</label>
+                        <input type="number" class="form-control" id="itemSteps" placeholder="20">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemModel" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="itemModel" placeholder="pixarStyleModel_v10.safetensors">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemPositivePrompt" class="form-label">Positive Prompt</label>
+                        <textarea class="form-control" id="itemPositivePrompt" rows="2" placeholder="pozitif prompt"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemNegativePrompt" class="form-label">Negative Prompt</label>
+                        <textarea class="form-control" id="itemNegativePrompt" rows="2" placeholder="negatif prompt"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemSeed" class="form-label">Seed</label>
+                        <input type="number" class="form-control" id="itemSeed" placeholder="-1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemDenoise" class="form-label">Denoise</label>
+                        <input type="text" class="form-control" id="itemDenoise" placeholder="0.2">
+                    </div>
+                    <div class="mb-3">
+                        <label for="itemScheduler" class="form-label">Scheduler</label>
+                        <input type="text" class="form-control" id="itemScheduler" placeholder="normal">
+                    </div>
+                    <div class="mb-3">
                         <label for="itemPriority" class="form-label">Öncelik</label>
                         <div class="input-group">
                             <input type="number" class="form-control" id="itemPriority" min="1" placeholder="Otomatik atanacak">
@@ -169,6 +205,42 @@
                     <div class="mb-3">
                         <label for="editItemLevel" class="form-label">Seviye</label>
                         <input type="number" class="form-control" id="editItemLevel" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemSamplerName" class="form-label">Sampler Name</label>
+                        <input type="text" class="form-control" id="editItemSamplerName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemCfg" class="form-label">CFG</label>
+                        <input type="number" class="form-control" id="editItemCfg">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemSteps" class="form-label">Steps</label>
+                        <input type="number" class="form-control" id="editItemSteps">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemModel" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="editItemModel">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemPositivePrompt" class="form-label">Positive Prompt</label>
+                        <textarea class="form-control" id="editItemPositivePrompt" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemNegativePrompt" class="form-label">Negative Prompt</label>
+                        <textarea class="form-control" id="editItemNegativePrompt" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemSeed" class="form-label">Seed</label>
+                        <input type="number" class="form-control" id="editItemSeed">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemDenoise" class="form-label">Denoise</label>
+                        <input type="text" class="form-control" id="editItemDenoise">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editItemScheduler" class="form-label">Scheduler</label>
+                        <input type="text" class="form-control" id="editItemScheduler">
                     </div>
                     <div class="mb-3">
                         <label for="editItemPriority" class="form-label">Öncelik</label>
@@ -388,14 +460,20 @@ function addModelItem() {
     const data = {
         name: name,
         credit: credit,
-        level: level
+        level: level,
+        sampler_name: $('#itemSamplerName').val(),
+        cfg: $('#itemCfg').val() ? parseInt($('#itemCfg').val()) : undefined,
+        steps: $('#itemSteps').val() ? parseInt($('#itemSteps').val()) : undefined,
+        model: $('#itemModel').val(),
+        positive_prompt: $('#itemPositivePrompt').val(),
+        negative_prompt: $('#itemNegativePrompt').val(),
+        seed: $('#itemSeed').val() ? parseInt($('#itemSeed').val()) : undefined,
+        denoise: $('#itemDenoise').val(),
+        scheduler: $('#itemScheduler').val()
     };
-    
     if (priority) {
         data.priority = priority;
     }
-    
-    // Eğer resim seçilmişse ekle
     if (imageId) {
         data.image_id = parseInt(imageId);
     }
@@ -450,15 +528,26 @@ function editModelItem(id, name, credit, level, priority, imageId) {
     $('#editItemCredit').val(credit);
     $('#editItemLevel').val(level);
     $('#editItemPriority').val(priority);
-    
-    // Mevcut resmi seç
-    if (imageId) {
-        $('#editItemImageId').val(imageId);
-    } else {
-        $('#editItemImageId').val('');
-    }
-    
-    $('#editModelItemModal').modal('show');
+    // Diğer alanlar için de doldurma yapılacak, item detayları API'den alınmalı
+    fetch(`/api/generatemodelitems/${id}`)
+        .then(response => response.json())
+        .then(item => {
+            $('#editItemSamplerName').val(item.sampler_name || '');
+            $('#editItemCfg').val(item.cfg || '');
+            $('#editItemSteps').val(item.steps || '');
+            $('#editItemModel').val(item.model || '');
+            $('#editItemPositivePrompt').val(item.positive_prompt || '');
+            $('#editItemNegativePrompt').val(item.negative_prompt || '');
+            $('#editItemSeed').val(item.seed || '');
+            $('#editItemDenoise').val(item.denoise || '');
+            $('#editItemScheduler').val(item.scheduler || '');
+            if (imageId) {
+                $('#editItemImageId').val(imageId);
+            } else {
+                $('#editItemImageId').val('');
+            }
+            $('#editModelItemModal').modal('show');
+        });
 }
 
 function updateModelItem() {
@@ -483,10 +572,17 @@ function updateModelItem() {
         name: name,
         credit: credit,
         level: level,
-        priority: priority
+        priority: priority,
+        sampler_name: $('#editItemSamplerName').val(),
+        cfg: $('#editItemCfg').val() ? parseInt($('#editItemCfg').val()) : undefined,
+        steps: $('#editItemSteps').val() ? parseInt($('#editItemSteps').val()) : undefined,
+        model: $('#editItemModel').val(),
+        positive_prompt: $('#editItemPositivePrompt').val(),
+        negative_prompt: $('#editItemNegativePrompt').val(),
+        seed: $('#editItemSeed').val() ? parseInt($('#editItemSeed').val()) : undefined,
+        denoise: $('#editItemDenoise').val(),
+        scheduler: $('#editItemScheduler').val()
     };
-    
-    // Eğer resim seçilmişse ekle
     if (imageId) {
         data.image_id = parseInt(imageId);
     }
