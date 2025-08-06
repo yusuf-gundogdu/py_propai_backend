@@ -188,3 +188,4 @@ python -c "from app.database import engine; print('DB OK')"
 ## Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. 
+
