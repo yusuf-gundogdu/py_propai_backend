@@ -20,6 +20,7 @@ async def upload_generated_image(
         action = data.get("action")
         generate_id = data.get("generate_id")
         udid = data.get("udid")
+        generate_duration_ms = data.get("generate_duration_ms")
         if not (action and generate_id and udid):
             raise HTTPException(status_code=400, detail="Eksik json alanı")
     except Exception as e:
@@ -49,9 +50,18 @@ async def upload_generated_image(
             history.generated_file_size = os.path.getsize(save_path)
             history.completed_at = datetime.utcnow()
 
-            if history.started_at and history.completed_at:
+            # Öncelik: generate_duration_ms varsa onu kullan
+            if generate_duration_ms is not None:
+                try:
+                    ms = int(generate_duration_ms)
+                    history.processing_time_seconds = int((ms + 999) // 1000)  # ms'yi yukarı yuvarla
+                except Exception:
+                    history.processing_time_seconds = None
+            elif history.started_at and history.completed_at:
                 delta = history.completed_at - history.started_at
                 history.processing_time_seconds = int(delta.total_seconds())
+            else:
+                history.processing_time_seconds = None
 
             await session.commit()
 

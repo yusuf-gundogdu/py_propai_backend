@@ -1,3 +1,5 @@
+# ...en son user_uploads ve generate_image endpointlerinden sonra ekle...
+# ...en son user_uploads ve generate_image endpointlerinden sonra ekle...
 from app.routers.upload_generated_image import router as upload_generated_image_router
 from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -159,6 +161,16 @@ app.include_router(upload_generated_image_router, prefix="/api")
 app.include_router(list_generated_images_router, prefix="/api")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+
+# generate_model_image endpointi
+@app.get("/images/generate_model_image/{filename}")
+async def serve_generate_model_image(filename: str):
+    """Model resimlerini sun"""
+    file_path = os.path.join("generate_model_image", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):

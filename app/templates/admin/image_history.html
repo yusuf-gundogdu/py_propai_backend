@@ -347,26 +347,16 @@ function displayData() {
                 <td><strong>#${history.id}</strong></td>
                 <td><code>${history.udid}</code></td>
                 <td>
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-info me-2">${history.model_id}</span>
-                        <small>${history.model?.name || 'Bilinmiyor'}</small>
-                        ${history.model?.image ? 
-                            `<img src="/images/generate_image/${history.model.image.fileName}" alt="Model" class="img-thumbnail ms-2" style="width: 30px; height: 30px; object-fit: cover;" onerror="this.style.display='none'">` : 
-                            '<i class="fas fa-image text-muted ms-2"></i>'
-                        }
-                    </div>
+                    <small>${history.model?.name || 'Bilinmiyor'}</small>
                 </td>
                 <td>${statusBadge}</td>
                 <td><span class="badge bg-warning">${history.credit} kredi</span></td>
                 <td><span class="badge bg-secondary">Seviye ${history.level}</span></td>
                 <td>
-                    <div class="d-flex align-items-center">
-                        ${history.model?.image ? 
-                            `<img src="/images/generate_image/${history.model.image.fileName}" alt="Model" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">` : 
-                            '<i class="fas fa-image text-muted me-2"></i>'
-                        }
-                        <small>${history.model?.name || 'Bilinmiyor'}</small>
-                    </div>
+                    ${history.model?.image ? 
+                        `<img src="/images/generate_model_image/${history.model.image.fileName}" alt="Model" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none';">` :
+                        '<i class="fas fa-image text-muted me-2"></i>'
+                    }
                 </td>
                 <td>
                     <div class="d-flex align-items-center">
@@ -377,7 +367,7 @@ function displayData() {
                 <td>
                     ${history.generated_image_path ? 
                         `<div class="d-flex align-items-center">
-                            <img src="/images/ai_generated/${history.generated_image_path.split('/').pop()}" alt="Generated" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">
+                            <img src="/images/generate_image/${history.generated_image_path.split('/').pop()}" alt="Generated" class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.innerHTML='<i class=\\'fas fa-image text-muted\\'></i>'">
                             <small>${history.generated_file_name || history.generated_image_path.split('/').pop() || 'Bilinmiyor'}</small>
                         </div>` : 
                         '<span class="text-muted">Henüz oluşturulmadı</span>'
@@ -576,7 +566,7 @@ function viewDetail(historyId) {
                             <div class="col-12 mb-3">
                                 <h6>Model Resmi</h6>
                                 ${data.model?.image ? 
-                                    `<img src="/images/generate_image/${data.model.image.fileName}" alt="Model" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Model resmi yüklenemedi (Dosya: ${data.model.image.fileName})</div>'>
+                                    `<img src="/images/generate_model_image/${data.model.image.fileName}" alt="Model" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Model resmi yüklenemedi (Dosya: ${data.model.image.fileName})</div>'>
                                     <div class="mt-2">
                                         <small class="text-muted">
                                             <strong>Model:</strong> ${data.model?.name || 'Bilinmiyor'}<br>
@@ -584,9 +574,9 @@ function viewDetail(historyId) {
                                             <strong>Seviye:</strong> ${data.model?.level || 'Bilinmiyor'}<br>
                                             <strong>Resim ID:</strong> ${data.model.image.id}<br>
                                             <strong>Resim Yolu:</strong> ${data.model.image.filePath || 'Bilinmiyor'}<br>
-                                            <strong>URL:</strong> /images/generate_image/${data.model.image.fileName}
+                                            <strong>URL:</strong> /images/generate_model_image/${data.model.image.fileName}
                                         </small>
-                                    </div>` : 
+                                    </div>` :
                                     '<div class="alert alert-warning">Model resmi yok (Model ID: ' + (data.model?.id || 'Bilinmiyor') + ')</div>'
                                 }
                             </div>
@@ -607,13 +597,13 @@ function viewDetail(historyId) {
                             <div class="col-12">
                                 <h6>Generate Edilmiş Resim</h6>
                                 ${data.generated_image_path ? 
-                                    `<img src="/images/ai_generated/${data.generated_image_path.split('/').pop()}" alt="Generated" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Generate edilmiş resim yüklenemedi (Dosya: ${data.generated_image_path.split('/').pop()})</div>'>
+                                    `<img src="/images/generate_image/${data.generated_image_path.split('/').pop()}" alt="Generated" class="img-fluid rounded" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'alert alert-warning\\'><i class=\\'fas fa-exclamation-triangle\\'></i> Generate edilmiş resim yüklenemedi (Dosya: ${data.generated_image_path.split('/').pop()})</div>'>
                                     <div class="mt-2">
                                         <small class="text-muted">
                                             <strong>Dosya:</strong> ${data.generated_file_name || data.generated_image_path.split('/').pop() || 'Bilinmiyor'}<br>
                                             <strong>Boyut:</strong> ${data.generated_file_size ? formatFileSize(data.generated_file_size) : 'Bilinmiyor'}<br>
                                             <strong>Yol:</strong> ${data.generated_image_path}<br>
-                                            <strong>URL:</strong> /images/ai_generated/${data.generated_image_path.split('/').pop()}
+                                            <strong>URL:</strong> /images/generate_image/${data.generated_image_path.split('/').pop()}
                                         </small>
                                     </div>` : 
                                     '<div class="alert alert-warning">Henüz generate edilmedi</div>'
