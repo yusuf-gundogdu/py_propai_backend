@@ -187,40 +187,37 @@ async def delete_image_history(
     
     # Dosyaları sil
     try:
-        # Original image dosyasını sil
-        if history.original_image_path and os.path.exists(history.original_image_path):
-            os.remove(history.original_image_path)
-            print(f"✅ Original image silindi: {history.original_image_path}")
-        
-        # Generated image dosyasını sil
+
+        # Orijinal resmi sil (user_uploads klasöründen de kontrol et)
+        original_path = history.original_image_path
+        # Eğer yol doğrudan user_uploads ile başlamıyorsa, sadece dosya adını alıp user_uploads klasöründe ara
+        if original_path and not os.path.exists(original_path):
+            filename = original_path.split('/')[-1]
+            alt_path = os.path.join('user_uploads', filename)
+            if os.path.exists(alt_path):
+                original_path = alt_path
+        if original_path and os.path.exists(original_path):
+            os.remove(original_path)
+            print(f"✅ Original image silindi: {original_path}")
+
+        # Generated image dosyasını sil (hem generate_image hem generate_model_image klasörlerini kontrol et)
         if history.generated_image_path:
-            # Yeni sistem: images/generate_image/{dosya}
-            if history.generated_image_path.startswith('images/generate_image/'):
-                filename = history.generated_image_path.replace('images/generate_image/', '')
-                generated_file_path = os.path.join('generate_image', filename)
-                if os.path.exists(generated_file_path):
-                    os.remove(generated_file_path)
-                    print(f"✅ Generated image silindi: {generated_file_path}")
-                else:
-                    print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
-            elif history.generated_image_path.startswith('/api/aigenerated/'):
-                filename = history.generated_image_path.replace('/api/aigenerated/', '')
-                # ai_generated klasörü kaldırıldı, bu satır silindi
-                if os.path.exists(generated_file_path):
-                    os.remove(generated_file_path)
-                    print(f"✅ Generated image silindi: {generated_file_path}")
-                else:
-                    print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
-            elif history.generated_image_path.startswith('/api/generatemodelitemimages/'):
-                filename = history.generated_image_path.replace('/api/generatemodelitemimages/', '')
-                generated_file_path = os.path.join('generate_image', filename)
-                if os.path.exists(generated_file_path):
-                    os.remove(generated_file_path)
-                    print(f"✅ Generated image silindi: {generated_file_path}")
-                else:
-                    print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
+            filename = history.generated_image_path.split('/')[-1]
+            # generate_image
+            generated_file_path = os.path.join('generate_image', filename)
+            if os.path.exists(generated_file_path):
+                os.remove(generated_file_path)
+                print(f"✅ Generated image silindi: {generated_file_path}")
             else:
-                print(f"⚠️ Bilinmeyen generated_image_path formatı: {history.generated_image_path}")
+                print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
+            # generate_model_image
+            generated_model_file_path = os.path.join('generate_model_image', filename)
+            if os.path.exists(generated_model_file_path):
+                os.remove(generated_model_file_path)
+                print(f"✅ Generated MODEL image silindi: {generated_model_file_path}")
+            else:
+                print(f"⚠️ Generated MODEL image dosyası bulunamadı: {generated_model_file_path}")
+
     except Exception as e:
         print(f"⚠️ Dosya silme hatası: {e}")
     

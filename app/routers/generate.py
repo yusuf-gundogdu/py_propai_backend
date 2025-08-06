@@ -392,6 +392,16 @@ async def upload_image(
     db: AsyncSession = Depends(get_db)
 ):
     print("[DEBUG] upload_image fonksiyonu çalıştı. model_id:", model_id)
+    print("[DEBUG] image.filename:", image.filename)
+    print("[DEBUG] image.content_type:", image.content_type)
+    print("[DEBUG] image.headers:", getattr(image, 'headers', None))
+    try:
+        image.file.seek(0, 2)
+        size = image.file.tell()
+        image.file.seek(0)
+        print(f"[DEBUG] image file size: {size} bytes")
+    except Exception as e:
+        print(f"[DEBUG] image file size hesaplanamadı: {e}")
     """
     Kullanıcı model_id ve image gönderir. generate_id backend'de otomatik oluşturulur.
     UDID, image ve model_id ile yeni bir history kaydı oluşturulur.
