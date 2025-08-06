@@ -350,70 +350,8 @@ async def simulate_image_generation_simple(history_id: int, original_db: AsyncSe
             print(f"History {history_id} bulunamadı")
             return
         
-        # Başarılı senaryo
-        generated_filename = f"ai_{uuid4()}.jpg"
-        generated_path = f"/api/aigenerated/{generated_filename}"
-        
-        # AI generated klasörü
-        ai_generated_dir = "ai_generated"
-        test_image_path = os.path.join(ai_generated_dir, generated_filename)
-        file_size = 0
-        
-        try:
-            # User uploads klasöründen rastgele bir resim kopyala
-            user_uploads_dir = "user_uploads"
-            if os.path.exists(user_uploads_dir):
-                user_images = [f for f in os.listdir(user_uploads_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
-                if user_images:
-                    random_image = random.choice(user_images)
-                    source_path = os.path.join(user_uploads_dir, random_image)
-                    shutil.copy2(source_path, test_image_path)
-                    file_size = os.path.getsize(test_image_path)
-                    print(f"✅ AI resmi oluşturuldu: {test_image_path} (Kaynak: {random_image}, Boyut: {file_size} bytes)")
-                else:
-                    # Placeholder oluştur
-                    with open(test_image_path, "wb") as f:
-                        test_image_data = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x11\x08\x00d\x00d\x01\x01\x11\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xaa\xff\xd9'
-                        f.write(test_image_data)
-                        file_size = len(test_image_data)
-                    print(f"✅ AI resmi oluşturuldu: {test_image_path} (Placeholder, Boyut: {file_size} bytes)")
-        except Exception as e:
-            print(f"❌ AI resmi oluşturulurken hata: {e}")
-            # Hata durumunda başarısız olarak işaretle
-            update_data = {
-                'status': 'failed',
-                'generated_image_path': None,
-                'generated_file_name': None,
-                'generated_file_size': None,
-                'completed_at': datetime.utcnow(),
-                'processing_time_seconds': 5,
-                'error_message': f'AI resmi oluşturulurken hata: {e}'
-            }
-            
-            # History'yi güncelle
-            for key, value in update_data.items():
-                setattr(history, key, value)
-            await db.commit()
-            print(f"İşlem {history_id} tamamlandı: {update_data['status']}")
-            return
-        
-        # Başarılı güncelleme
-        update_data = {
-            'status': 'success',
-            'generated_image_path': generated_path,
-            'generated_file_name': generated_filename,
-            'generated_file_size': file_size,
-            'completed_at': datetime.utcnow(),
-            'processing_time_seconds': 5,
-            'error_message': None
-        }
-        
-        # History'yi güncelle
-        for key, value in update_data.items():
-            setattr(history, key, value)
-        
-        await db.commit()
-        print(f"✅ İşlem {history_id} başarılı oldu: {update_data['status']}")
+    # Bu fonksiyonun ai_generated klasörüyle ilgili kodları kaldırıldı.
+    print("[simulate_image_generation_simple] ai_generated klasörü ve ilgili kodlar kaldırıldı.")
 
 @router.get("/status/{history_id}", response_model=GenerateStatusResponse)
 async def get_generation_status(

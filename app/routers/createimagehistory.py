@@ -205,7 +205,7 @@ async def delete_image_history(
                     print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
             elif history.generated_image_path.startswith('/api/aigenerated/'):
                 filename = history.generated_image_path.replace('/api/aigenerated/', '')
-                generated_file_path = os.path.join('ai_generated', filename)
+                # ai_generated klasörü kaldırıldı, bu satır silindi
                 if os.path.exists(generated_file_path):
                     os.remove(generated_file_path)
                     print(f"✅ Generated image silindi: {generated_file_path}")

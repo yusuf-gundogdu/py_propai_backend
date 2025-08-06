@@ -20,7 +20,6 @@ from app.routers.generatemodelitemimage import router as generatemodelitemimage_
 from app.routers.createimagehistory import router as createimagehistory_router
 from app.routers.generate import router as generate_router
 from app.routers.userupload import router as userupload_router
-from app.routers.aigenerated import router as aigenerated_router
 from app.models.account import Account
 from app.models.user import User
 from app.models.generatemodellist import GenerateModelList
@@ -156,7 +155,6 @@ app.include_router(generatemodelitemimage_router, prefix="/api")
 app.include_router(createimagehistory_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(userupload_router, prefix="/api")
-app.include_router(aigenerated_router, prefix="/api")
 app.include_router(upload_generated_image_router, prefix="/api")
 app.include_router(list_generated_images_router, prefix="/api")
 
@@ -176,7 +174,7 @@ async def startup():
     from dotenv import load_dotenv
     # .env dosyasını yükle
     load_dotenv()
-    folders = ["ai_generated", "user_uploads", "generate_image", "generate_model_image"]
+    folders = ["user_uploads", "generate_image", "generate_model_image"]
     for folder in folders:
         try:
             os.makedirs(folder, exist_ok=True)
@@ -237,14 +235,6 @@ async def serve_user_image(filename: str):
 async def serve_generated_image(filename: str):
     """Generate edilmiş resimleri sun"""
     file_path = os.path.join("generate_image", filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(file_path)
-
-@app.get("/images/ai_generated/{filename}")
-async def serve_ai_generated_image(filename: str):
-    """AI tarafından oluşturulan resimleri sun"""
-    file_path = os.path.join("ai_generated", filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(file_path)
