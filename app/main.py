@@ -176,7 +176,7 @@ async def startup():
     from dotenv import load_dotenv
     # .env dosyasını yükle
     load_dotenv()
-    folders = ["ai_generated", "user_uploads", "generate_image"]
+    folders = ["ai_generated", "user_uploads", "generate_image", "generate_model_image"]
     for folder in folders:
         try:
             os.makedirs(folder, exist_ok=True)

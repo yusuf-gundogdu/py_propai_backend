@@ -194,8 +194,16 @@ async def delete_image_history(
         
         # Generated image dosyasını sil
         if history.generated_image_path:
-            # Path'den dosya adını çıkar
-            if history.generated_image_path.startswith('/api/aigenerated/'):
+            # Yeni sistem: images/generate_image/{dosya}
+            if history.generated_image_path.startswith('images/generate_image/'):
+                filename = history.generated_image_path.replace('images/generate_image/', '')
+                generated_file_path = os.path.join('generate_image', filename)
+                if os.path.exists(generated_file_path):
+                    os.remove(generated_file_path)
+                    print(f"✅ Generated image silindi: {generated_file_path}")
+                else:
+                    print(f"⚠️ Generated image dosyası bulunamadı: {generated_file_path}")
+            elif history.generated_image_path.startswith('/api/aigenerated/'):
                 filename = history.generated_image_path.replace('/api/aigenerated/', '')
                 generated_file_path = os.path.join('ai_generated', filename)
                 if os.path.exists(generated_file_path):

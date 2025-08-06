@@ -49,7 +49,7 @@ async def upload_image_no_model(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
-    save_dir = "generate_image"
+    save_dir = "generate_model_image"
     os.makedirs(save_dir, exist_ok=True)
 
     ext = os.path.splitext(file.filename)[1]
