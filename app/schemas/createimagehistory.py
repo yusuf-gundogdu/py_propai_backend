@@ -25,6 +25,7 @@ class GenerateModelItemRead(BaseModel):
 class CreateImageHistoryBase(BaseModel):
     udid: str
     model_id: int
+    generate_id: str  # Zorunlu alan
     original_image_path: str
     original_file_name: Optional[str] = None
     original_file_size: Optional[int] = None

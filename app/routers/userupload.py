@@ -41,10 +41,17 @@ async def upload_user_image(
 async def get_user_image(filename: str):
     """Kullanıcının yüklediği resmi getir"""
     
-    file_path = os.path.join("user_uploads", filename)
-    
+    # Her zaman tam path ile eriş
+    file_path = os.path.abspath(os.path.join("user_uploads", filename))
+    print(f"[USERUPLOAD] İstek: {filename}")
+    print(f"[USERUPLOAD] Dosya path: {file_path}")
     if not os.path.exists(file_path):
+        print(f"[USERUPLOAD] Dosya bulunamadı: {file_path}")
         raise HTTPException(status_code=404, detail="Image file not found")
-    
-    from fastapi.responses import FileResponse
-    return FileResponse(file_path) 
+    try:
+        from fastapi.responses import FileResponse
+        print(f"[USERUPLOAD] Dosya bulundu, FileResponse ile döndürülüyor.")
+        return FileResponse(file_path)
+    except Exception as e:
+        print(f"[USERUPLOAD] FileResponse hatası: {e}")
+        raise HTTPException(status_code=500, detail=f"FileResponse error: {e}")

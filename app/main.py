@@ -26,8 +26,45 @@ from app.models.generatemodellist import GenerateModelList
 from app.models.generatemodelitem import GenerateModelItem
 from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.models.createimagehistory import CreateImageHistory
-import os
 
+import os
+import subprocess
+import signal
+
+
+# --- WS process yönetimi ---
+ws_process = None
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+def start_ws_server():
+    global ws_process
+    import threading
+    ws_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../ws/server.py'))
+    logging.info(f"[WS][DEBUG] ws_path: {ws_path}")
+    try:
+        ws_process = subprocess.Popen(
+            ['python3', ws_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        logging.info(f"[WS] WebSocket sunucu başlatıldı: {ws_path}")
+        def log_ws_errors():
+            if ws_process and ws_process.stderr:
+                for line in iter(ws_process.stderr.readline, b''):
+                    logging.error("[WS][stderr] " + line.decode(errors='replace').rstrip())
+        threading.Thread(target=log_ws_errors, daemon=True).start()
+    except Exception as e:
+        logging.error(f"[WS] WebSocket sunucu başlatılamadı: {e}")
+
+def stop_ws_server():
+    global ws_process
+    if ws_process and ws_process.poll() is None:
+        ws_process.terminate()
+        try:
+            ws_process.wait(timeout=5)
+        except Exception:
+            ws_process.kill()
+        print("[WS] WebSocket sunucu durduruldu.")
 
 app = FastAPI(
     title="PropAI",
@@ -126,17 +163,15 @@ async def root(request: Request):
     """Ana sayfa - otomatik olarak admin'e yönlendirir"""
     return RedirectResponse(url="/admin/", status_code=302)
 
+
 @app.on_event("startup")
 async def startup():
     print("SQLAlchemy'nin gördüğü tablolar:", Base.metadata.tables.keys())
-    
     # Gerekli klasörleri oluştur
     import os
     from dotenv import load_dotenv
-    
     # .env dosyasını yükle
     load_dotenv()
-    
     folders = ["ai_generated", "user_uploads", "generate_image"]
     for folder in folders:
         try:
@@ -144,7 +179,6 @@ async def startup():
             print(f"✅ Klasör oluşturuldu/kontrol edildi: {folder}")
         except Exception as e:
             print(f"❌ Klasör oluşturma hatası {folder}: {e}")
-    
     # Veritabanı işlemleri
     async with engine.begin() as conn:
         # Önce eski account_id alanını sil (bir kerelik)
@@ -153,20 +187,15 @@ async def startup():
             print("Removed obsolete account_id column from create_image_history")
         except Exception as e:
             print(f"Error removing account_id column: {e}")
-        
         # Sonra tabloları oluştur
         await conn.run_sync(Base.metadata.create_all)
-    
     # Admin kullanıcıyı oluştur
     from sqlalchemy.future import select
     from app.utils.auth_utils import get_password_hash
     from app.database import async_session
-    
     USERNAME = os.getenv("BASIC_AUTH_USERNAME")
     PASSWORD = os.getenv("BASIC_AUTH_PASSWORD")
-    
     print(f"Environment values - USERNAME: {USERNAME}, PASSWORD: {'***' if PASSWORD else None}")
-    
     if USERNAME and PASSWORD:
         async with async_session() as session:
             result = await session.execute(select(User).where(User.username == USERNAME))
@@ -184,6 +213,13 @@ async def startup():
                 print(f"✅ Admin kullanıcısı zaten mevcut: {USERNAME}")
     else:
         print("❌ Environment variables not found for admin user creation")
+    # --- ws server'ı başlat ---
+    start_ws_server()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    stop_ws_server()
 
 @app.get("/images/user_uploads/{filename}")
 async def serve_user_image(filename: str):

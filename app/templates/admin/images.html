@@ -20,6 +20,11 @@
             <div class="card-body">
                 <form id="createImageForm">
                     <div class="mb-3">
+                        <label for="generateId" class="form-label">Generate ID</label>
+                        <input type="text" class="form-control" id="generateId" readonly>
+                        <small class="form-text text-muted">Her işlem için otomatik atanır, kopyalayabilirsiniz.</small>
+                    </div>
+                    <div class="mb-3">
                         <label for="uploadImage" class="form-label">Resim Yükle</label>
                         <input type="file" class="form-control" id="uploadImage" accept="image/*" required>
                         <small class="form-text text-muted">Yüklemek istediğiniz resmi seçin (JPG, PNG, GIF)</small>
@@ -257,44 +262,26 @@ $('#createImageForm').on('submit', function(e) {
     const fileInput = $('#uploadImage')[0];
     const modelId = $('#selectedModel').val();
     const udid = $('#udid').val();
-    
     if (!fileInput.files[0]) {
         alert('Lütfen bir resim seçin');
         return;
     }
-    
     if (!modelId) {
         alert('Lütfen bir model seçin');
         return;
     }
-    
-    // Dosyayı yükle
+    if (!udid) {
+        alert('Lütfen bir UDID girin');
+        return;
+    }
+    // Dosya adını udid__filename.jpg formatına çevir
+    const originalFile = fileInput.files[0];
+    const newFileName = udid + '__' + originalFile.name;
     const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    
-    // Önce kullanıcı resmini yükle
-    fetch('/api/userupload/', {
+    formData.append('image', originalFile, newFileName);
+    fetch(`/api/generate/upload/${modelId}`, {
         method: 'POST',
         body: formData
-    })
-    .then(response => response.json())
-    .then(imageData => {
-        // Sonra CreateImageHistory kaydı oluştur
-        const historyData = {
-            udid: udid,
-            model_id: parseInt(modelId),
-            original_image_path: imageData.filePath,
-            original_file_name: imageData.fileName,
-            original_file_size: imageData.fileSize
-        };
-        
-        return fetch('/api/createimagehistory/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(historyData)
-        });
     })
     .then(response => {
         if (!response.ok) {
@@ -304,44 +291,19 @@ $('#createImageForm').on('submit', function(e) {
         }
         return response.json();
     })
-    .then(historyData => {
-        console.log('API Response:', historyData);
-        alert('Resim oluşturma işlemi başlatıldı! ID: ' + historyData.id);
-        
-        // Formu temizle
+    .then(data => {
+        console.log('API Response:', data);
+        alert('Resim oluşturma işlemi başlatıldı! ID: ' + data.history_id);
         $('#createImageForm')[0].reset();
-        
-        // Listeleri yenile
         loadRecentHistory();
         loadStats();
-        
-        // Generate işlemini başlat
-        startGeneration(historyData.id);
     })
     .catch(error => {
         console.error('Resim oluşturma hatası:', error);
-        // Spesifik hata mesajını göster
         alert('Hata: ' + error.message);
     });
 });
 
-function startGeneration(historyId) {
-    // Generate işlemini başlat
-    fetch(`/api/generate/start/${historyId}`, {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Generate başlatıldı:', data);
-        
-        // Durumu kontrol etmeye başla
-        checkGenerationStatus(historyId);
-    })
-    .catch(error => {
-        console.error('Generate başlatma hatası:', error);
-        alert('Generate işlemi başlatılırken hata oluştu');
-    });
-}
 
 function checkGenerationStatus(historyId) {
     const checkStatus = () => {

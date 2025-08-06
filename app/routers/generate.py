@@ -1,3 +1,4 @@
+
 from fastapi import Query, APIRouter, Depends, HTTPException, BackgroundTasks, status, UploadFile, File, Form
 from typing import List, Optional
 from datetime import datetime
@@ -16,6 +17,8 @@ import os
 import shutil
 from uuid import uuid4
 from pydantic import BaseModel
+from datetime import timezone
+
 
 router = APIRouter(prefix="/generate", tags=["Generate"])
 
@@ -390,22 +393,52 @@ async def get_generation_status(
     )
 
 
-@router.post("/upload/{generate_id}", response_model=GenerateStartResponse)
+
+# YENİ: /upload/{model_id} endpointi
+@router.post("/upload/{model_id}", response_model=GenerateStartResponse)
 async def upload_image(
-    generate_id: str,
+    model_id: int,
     image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
+    print("[DEBUG] upload_image fonksiyonu çalıştı. model_id:", model_id)
     """
-    Kullanıcı sadece generate_id ve image gönderir. Diğer tüm bilgiler backend'de bulunur.
+    Kullanıcı model_id ve image gönderir. generate_id backend'de otomatik oluşturulur.
+    UDID, image ve model_id ile yeni bir history kaydı oluşturulur.
     """
-    # History kaydını bul
-    from sqlalchemy.future import select
-    history_query = select(CreateImageHistory).where(CreateImageHistory.generate_id == generate_id)
-    result = await db.execute(history_query)
-    history = result.scalar_one_or_none()
-    if not history:
-        raise HTTPException(status_code=404, detail="Geçersiz generate_id.")
+    # Kullanıcıyı (udid) image ile birlikte formdan veya header'dan al
+    # (örnek: udid form-data ile gönderilebilir veya authentication'dan alınabilir)
+    # Burada örnek olarak udid'i dosya adından alıyoruz: udid__filename.jpg
+    udid = None
+    try:
+        udid = image.filename.split("__")[0]  # örnek: udid__filename.jpg
+    except Exception:
+        pass
+    if not udid:
+        raise HTTPException(status_code=400, detail="UDID alınamadı. Lütfen dosya adını udid__filename.jpg formatında gönderin.")
+
+    # Modeli bul
+    model_query = select(GenerateModelItem).where(GenerateModelItem.id == model_id)
+    model_result = await db.execute(model_query)
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model bulunamadı.")
+
+    # Kullanıcı hesabını bul
+    account_query = select(Account).where(Account.udid == udid)
+    account_result = await db.execute(account_query)
+    account = account_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Kullanıcı hesabı bulunamadı.")
+
+    # Kredi ve level kontrolü
+    if account.credit < model.credit:
+        raise HTTPException(status_code=400, detail=f"Yetersiz kredi. Model için {model.credit} kredi gerekli, hesabınızda {account.credit} kredi var.")
+    if account.level < model.level:
+        raise HTTPException(status_code=403, detail=f"Bu model için Level {model.level} gerekli. Şu anda Level {account.level} kullanıcısısınız.")
+
+    # generate_id oluştur
+    generate_id = str(uuid4())
 
     # Resim dosyası kontrolü
     if not image.content_type or not image.content_type.startswith('image/'):
@@ -420,43 +453,82 @@ async def upload_image(
             shutil.copyfileobj(image.file, buffer)
         file_size = os.path.getsize(file_path)
         # Kredi düşümü: sadece resim başarıyla kaydedilirse
-        # Account'u bul
-        account_query = select(Account).where(Account.udid == history.udid)
-        account_result = await db.execute(account_query)
-        account = account_result.scalar_one_or_none()
-        if account:
-            # Model kredi miktarını bul
-            model_query = select(GenerateModelItem).where(GenerateModelItem.id == history.model_id)
-            model_result = await db.execute(model_query)
-            model = model_result.scalar_one_or_none()
-            if model and account.credit >= model.credit:
-                account.credit -= model.credit
-                await db.commit()
-                await db.refresh(account)
-                print(f"✅ Kullanıcı {account.udid} için {model.credit} kredi düşüldü. Yeni kredi: {account.credit}")
-            else:
-                print(f"❌ Kredi düşümü başarısız: model veya kredi yetersiz.")
+        if account and model and account.credit >= model.credit:
+            account.credit -= model.credit
+            await db.commit()
+            await db.refresh(account)
+            print(f"✅ Kullanıcı {account.udid} için {model.credit} kredi düşüldü. Yeni kredi: {account.credit}")
+        else:
+            print(f"❌ Kredi düşümü başarısız: model veya kredi yetersiz.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Resim kaydedilirken hata oluştu: {str(e)}")
 
-    # History kaydını güncelle
-    history.original_image_path = f"/api/userupload/{unique_filename}"
-    history.original_file_size = file_size
-    history.original_file_name = image.filename
-    history.status = 'processing'
-    history.started_at = datetime.utcnow()
+    # Yeni history kaydı oluştur
+    history = CreateImageHistory(
+        udid=udid,
+        model_id=model_id,
+        generate_id=generate_id,
+        original_image_path=f"/api/userupload/{unique_filename}",
+        original_file_size=file_size,
+        original_file_name=image.filename,
+        credit=model.credit,
+        level=account.level,
+        status='processing',
+        started_at=datetime.utcnow()
+    )
+    db.add(history)
     await db.commit()
     await db.refresh(history)
 
-    # Generate işlemini başlat (background'da)
-    from app.routers.generate import simulate_image_generation_simple
-    import asyncio
-    asyncio.create_task(simulate_image_generation_simple(history.id, db))
+    # --- WS JSON MESAJI GÖNDER ---
+
+    import json
+    import requests
+
+    # Dışarıdan erişilebilen bir URL kullan
+    # .env dosyasına SERVER_URL eklenmişse onu kullan, yoksa fallback olarak propai.store
+    server_url = os.getenv("SERVER_URL", "https://propai.store")
+    image_url = f"{server_url}{history.original_image_path}" if history.original_image_path else None
+
+    ws_payload = {
+        "action": "generate_image",
+        "generate_id": history.generate_id,
+        "udid": history.udid,
+        "model_id": str(history.model_id),
+        "ksampler": {
+            "sampler_name": model.sampler_name if model else None,
+            "cfg": model.cfg if model else None,
+            "steps": model.steps if model else None,
+            "model": model.model if model else None,
+            "positive_prompt": model.positive_prompt if model else None,
+            "negative_prompt": model.negative_prompt if model else None,
+            "seed": model.seed if model else None,
+            "denoise": model.denoise if model else None,
+            "scheduler": model.scheduler if model else None
+        },
+        "image_url": image_url,
+        "timestamp": datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+    }
+
+    # Broadcast API'ye POST ile gönder
+    try:
+        print("[WS] Broadcast API'ye gönderilecek JSON:")
+        print(json.dumps(ws_payload, ensure_ascii=False, indent=2))
+        resp = requests.post("http://127.0.0.1:8876", json=ws_payload, timeout=2)
+        print(f"[WS] Broadcast API yanıtı: {resp.status_code} {resp.text}")
+    except Exception as e:
+        print(f"[WS] Broadcast API'ye mesaj gönderilemedi: {e}")
 
     return GenerateStartResponse(
         history_id=history.id,
-        message="Generate işlemi başlatıldı",
-        status="processing"
+        message="WS mesajı gönderildi",
+        status="processing",
+        generate_id=history.generate_id,
+        udid=history.udid,
+        model_id=history.model_id,
+        ksampler=ws_payload["ksampler"],
+        image_url=image_url,
+        timestamp=ws_payload["timestamp"]
     )
 
 # --- GALLERY SERVISI ---
