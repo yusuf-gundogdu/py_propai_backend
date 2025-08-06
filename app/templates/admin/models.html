@@ -177,6 +177,7 @@
                         </div>
                     </div>
 
+
                     <div class="mb-3">
                         <label class="form-label">Item Seçimi</label>
                         <div class="row">
@@ -479,11 +480,9 @@ function editModel(id, name, priority, itemIds) {
     $('#editModelId').val(id);
     $('#editModelName').val(name);
     $('#editModelPriority').val(priority);
-    
     editSelectedItemIds = itemIds || [];
     populateEditAvailableItems();
     populateEditSelectedItems();
-    
     $('#editModelModal').modal('show');
 }
 
