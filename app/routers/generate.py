@@ -1,3 +1,53 @@
+# --- YENİ: /api/upload-generated-image endpointi (ws_client için) ---
+from fastapi import UploadFile, File, Form
+import json as pyjson
+
+@router.post("/upload-generated-image")
+async def upload_generated_image(
+    json: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    ws_client tarafından ComfyUI generate işlemi sonrası çağrılır.
+    - 'json': {action, generate_id, udid} içeren string
+    - 'file': Görsel dosyası (ör. PNG)
+    """
+    try:
+        data = pyjson.loads(json)
+    except Exception as e:
+        return {"success": False, "error": f"JSON parse hatası: {e}"}
+
+    generate_id = data.get("generate_id")
+    udid = data.get("udid")
+    action = data.get("action")
+    if not (generate_id and udid and action == "generated_image"):
+        return {"success": False, "error": "Eksik veya hatalı alanlar"}
+
+    # Dosya kaydet
+    ext = ".png"
+    if file.filename and "." in file.filename:
+        ext = "." + file.filename.split(".")[-1]
+    filename = f"generated_{generate_id}{ext}"
+    save_path = f"generate_image/{filename}"
+    try:
+        with open(save_path, "wb") as f:
+            f.write(await file.read())
+    except Exception as e:
+        return {"success": False, "error": f"Dosya kaydedilemedi: {e}"}
+
+    # Gerekirse burada veritabanına kayıt veya başka işlem yapılabilir
+
+    # Dışarıdan erişilebilecek URL üret
+    from os import getenv
+    server_url = getenv("SERVER_URL", "https://propai.store")
+    image_url = f"{server_url}/api/generateimage/{filename}"
+
+    return {
+        "success": True,
+        "generate_id": generate_id,
+        "udid": udid,
+        "image_url": image_url
+    }
 
 from fastapi import Query, APIRouter, Depends, HTTPException, BackgroundTasks, status, UploadFile, File, Form
 from typing import List, Optional
