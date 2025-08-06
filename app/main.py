@@ -1,3 +1,4 @@
+from app.routers.upload_generated_image import router as upload_generated_image_router
 from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
@@ -26,6 +27,7 @@ from app.models.generatemodellist import GenerateModelList
 from app.models.generatemodelitem import GenerateModelItem
 from app.models.generatemodelitemimage import GenerateModelItemImage
 from app.models.createimagehistory import CreateImageHistory
+from app.routers.list_generated_images import router as list_generated_images_router
 
 import os
 import subprocess
@@ -155,6 +157,8 @@ app.include_router(createimagehistory_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(userupload_router, prefix="/api")
 app.include_router(aigenerated_router, prefix="/api")
+app.include_router(upload_generated_image_router, prefix="/api")
+app.include_router(list_generated_images_router, prefix="/api")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
