@@ -23,3 +23,6 @@ class GenerateModelItem(Base):
     seed = Column(Integer, nullable=True)
     denoise = Column(Float, nullable=True)
     scheduler = Column(String, nullable=True)
+    # Lora alanı (JSON, nullable)
+    from sqlalchemy import JSON
+    lora = Column(JSON, nullable=True)

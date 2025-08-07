@@ -147,6 +147,19 @@
                         <input type="text" class="form-control" id="itemScheduler" placeholder="normal">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Lora (Opsiyonel)</label>
+                        <input type="text" class="form-control mb-1" id="itemLoraFilename" placeholder="filename ör: princess_xl_v2.safetensors">
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="number" step="any" class="form-control" id="itemLoraStrengthModel" placeholder="strength_model (örn: 0.1)">
+                            </div>
+                            <div class="col">
+                                <input type="number" step="any" class="form-control" id="itemLoraStrengthClip" placeholder="strength_clip (örn: 0.4)">
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Tüm alanlar opsiyoneldir.</small>
+                    </div>
+                    <div class="mb-3">
                         <label for="itemPriority" class="form-label">Öncelik</label>
                         <div class="input-group">
                             <input type="number" class="form-control" id="itemPriority" min="1" placeholder="Otomatik atanacak">
@@ -241,6 +254,19 @@
                     <div class="mb-3">
                         <label for="editItemScheduler" class="form-label">Scheduler</label>
                         <input type="text" class="form-control" id="editItemScheduler">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lora (Opsiyonel)</label>
+                        <input type="text" class="form-control mb-1" id="editItemLoraFilename" placeholder="filename ör: princess_xl_v2.safetensors">
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="number" step="any" class="form-control" id="editItemLoraStrengthModel" placeholder="strength_model (örn: 0.1)">
+                            </div>
+                            <div class="col">
+                                <input type="number" step="any" class="form-control" id="editItemLoraStrengthClip" placeholder="strength_clip (örn: 0.4)">
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Tüm alanlar opsiyoneldir.</small>
                     </div>
                     <div class="mb-3">
                         <label for="editItemPriority" class="form-label">Öncelik</label>
@@ -446,17 +472,26 @@ function addModelItem() {
     const level = parseInt($('#itemLevel').val());
     const priority = $('#itemPriority').val() ? parseInt($('#itemPriority').val()) : null;
     const imageId = $('#itemImageId').val();
-    
+    // Lora alanları
+    const loraFilename = $('#itemLoraFilename').val();
+    const loraStrengthModel = $('#itemLoraStrengthModel').val();
+    const loraStrengthClip = $('#itemLoraStrengthClip').val();
+    let lora = null;
+    if (loraFilename || loraStrengthModel || loraStrengthClip) {
+        lora = {
+            filename: loraFilename || null,
+            strength_model: loraStrengthModel ? parseFloat(loraStrengthModel) : null,
+            strength_clip: loraStrengthClip ? parseFloat(loraStrengthClip) : null
+        };
+    }
     if (!name) {
         alert('Lütfen öğe adını girin');
         return;
     }
-    
     // Loading state
     const addButton = $('#addModelItemModal .btn-primary');
     const originalText = addButton.text();
     addButton.prop('disabled', true).text('Ekleniyor...');
-    
     const data = {
         name: name,
         credit: credit,
@@ -469,7 +504,8 @@ function addModelItem() {
         negative_prompt: $('#itemNegativePrompt').val(),
         seed: $('#itemSeed').val() ? parseInt($('#itemSeed').val()) : undefined,
         denoise: $('#itemDenoise').val(),
-        scheduler: $('#itemScheduler').val()
+        scheduler: $('#itemScheduler').val(),
+        lora: lora
     };
     if (priority) {
         data.priority = priority;
@@ -477,7 +513,6 @@ function addModelItem() {
     if (imageId) {
         data.image_id = parseInt(imageId);
     }
-    
     fetch('/api/generatemodelitems/', {
         method: 'POST',
         headers: {
@@ -541,6 +576,16 @@ function editModelItem(id, name, credit, level, priority, imageId) {
             $('#editItemSeed').val(item.seed || '');
             $('#editItemDenoise').val(item.denoise || '');
             $('#editItemScheduler').val(item.scheduler || '');
+            // Lora alanı doldur
+            if (item.lora) {
+                $('#editItemLoraFilename').val(item.lora.filename || '');
+                $('#editItemLoraStrengthModel').val(item.lora.strength_model || '');
+                $('#editItemLoraStrengthClip').val(item.lora.strength_clip || '');
+            } else {
+                $('#editItemLoraFilename').val('');
+                $('#editItemLoraStrengthModel').val('');
+                $('#editItemLoraStrengthClip').val('');
+            }
             if (imageId) {
                 $('#editItemImageId').val(imageId);
             } else {
@@ -568,6 +613,18 @@ function updateModelItem() {
     const originalText = updateButton.text();
     updateButton.prop('disabled', true).text('Güncelleniyor...');
     
+    // Lora alanları
+    const loraFilename = $('#editItemLoraFilename').val();
+    const loraStrengthModel = $('#editItemLoraStrengthModel').val();
+    const loraStrengthClip = $('#editItemLoraStrengthClip').val();
+    let lora = null;
+    if (loraFilename || loraStrengthModel || loraStrengthClip) {
+        lora = {
+            filename: loraFilename || null,
+            strength_model: loraStrengthModel ? parseFloat(loraStrengthModel) : null,
+            strength_clip: loraStrengthClip ? parseFloat(loraStrengthClip) : null
+        };
+    }
     const data = {
         name: name,
         credit: credit,
@@ -581,7 +638,8 @@ function updateModelItem() {
         negative_prompt: $('#editItemNegativePrompt').val(),
         seed: $('#editItemSeed').val() ? parseInt($('#editItemSeed').val()) : undefined,
         denoise: $('#editItemDenoise').val(),
-        scheduler: $('#editItemScheduler').val()
+        scheduler: $('#editItemScheduler').val(),
+        lora: lora
     };
     if (imageId) {
         data.image_id = parseInt(imageId);

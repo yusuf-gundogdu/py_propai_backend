@@ -15,10 +15,21 @@ async def upload_generated_image(
     - 'json': {action, generate_id, udid} içeren string
     - 'file': Görsel dosyası (ör. PNG)
     """
+
     try:
         data = pyjson.loads(json)
     except Exception as e:
         return {"success": False, "error": f"JSON parse hatası: {e}"}
+
+    # Eğer ksampler.lora varsa, en üste taşı
+    lora = data.get("ksampler", {}).get("lora")
+    if lora:
+        data["lora"] = lora
+
+    print("\n**********************************")
+    print("[UPLOAD-GENERATED-IMAGE] GÖNDERİLEN JSON:")
+    print(pyjson.dumps(data, ensure_ascii=False, indent=2))
+    print("**********************************\n")
 
     generate_id = data.get("generate_id")
     udid = data.get("udid")
@@ -490,6 +501,7 @@ async def upload_image(
     server_url = os.getenv("SERVER_URL", "https://propai.store")
     image_url = f"{server_url}{history.original_image_path}" if history.original_image_path else None
 
+    print("[DEBUG] model.lora:", model.lora if model else None)
     ws_payload = {
         "action": "generate_image",
         "generate_id": history.generate_id,
@@ -509,11 +521,16 @@ async def upload_image(
         "image_url": image_url,
         "timestamp": datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     }
+    # lora varsa ws_payload["ksampler"] içine ekle
+    if model and model.lora:
+        ws_payload["ksampler"]["lora"] = model.lora
 
     # Broadcast API'ye POST ile gönder
     try:
-        print("[WS] Broadcast API'ye gönderilecek JSON:")
+        print("\n**********************************")
+        print("[WS] GÖNDERİLEN JSON:")
         print(json.dumps(ws_payload, ensure_ascii=False, indent=2))
+        print("**********************************\n")
         resp = requests.post("http://127.0.0.1:8876", json=ws_payload, timeout=2)
         print(f"[WS] Broadcast API yanıtı: {resp.status_code} {resp.text}")
     except Exception as e:

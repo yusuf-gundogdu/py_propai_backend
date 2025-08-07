@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from app.schemas.generatemodelitemimage import GenerateModelItemImageRead
 
 class GenerateModelItemBase(BaseModel):
@@ -15,10 +15,12 @@ class GenerateModelItemBase(BaseModel):
     seed: Optional[int] = None
     denoise: Optional[float] = None
     scheduler: Optional[str] = None
+    lora: Optional[Dict[str, Any]] = None
 
 class GenerateModelItemCreate(GenerateModelItemBase):
     image_id: Optional[int] = None
     priority: Optional[int] = None  # Gönderilmezse otomatik atanacak
+    lora: Optional[Dict[str, Any]] = None
 
 class GenerateModelItemUpdate(BaseModel):
     name: Optional[str] = None
@@ -35,6 +37,7 @@ class GenerateModelItemUpdate(BaseModel):
     seed: Optional[int] = None
     denoise: Optional[float] = None
     scheduler: Optional[str] = None
+    lora: Optional[Dict[str, Any]] = None
 
 class GenerateModelItemRead(BaseModel):
     id: int
@@ -52,5 +55,6 @@ class GenerateModelItemRead(BaseModel):
     seed: Optional[int] = None
     denoise: Optional[float] = None
     scheduler: Optional[str] = None
+    lora: Optional[Dict[str, Any]] = None
     class Config:
         from_attributes = True 
